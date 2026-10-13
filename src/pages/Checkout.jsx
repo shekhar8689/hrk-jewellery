@@ -392,7 +392,7 @@ export default function Checkout() {
                   <div key={i} className="flex gap-3 items-start">
                     <div className="w-14 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
                       {item.images?.[0]
-                        ? <img src={getImageUrl(item.images[0])} alt={item.name} className="w-full h-full object-cover" />
+                        ? <img src={getImageUrl(item.images[0], 200)} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center text-gray-300 text-[10px]">No img</div>
                       }
                     </div>

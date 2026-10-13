@@ -6,7 +6,7 @@ const fileToImage = (file) =>
 
 exports.getAll = async (_req, res) => {
   try {
-    const banners = await Banner.find().sort({ order: 1, createdAt: -1 })
+    const banners = await Banner.find().sort({ order: 1, createdAt: -1 }).lean()
     res.json(banners)
   } catch {
     res.status(500).json({ message: 'Server error' })
@@ -15,7 +15,7 @@ exports.getAll = async (_req, res) => {
 
 exports.getActive = async (_req, res) => {
   try {
-    const banners = await Banner.find({ isActive: true }).sort({ order: 1 })
+    const banners = await Banner.find({ isActive: true }).sort({ order: 1 }).lean()
     res.json(banners)
   } catch {
     res.status(500).json({ message: 'Server error' })

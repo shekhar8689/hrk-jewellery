@@ -45,6 +45,7 @@ export default function Categories() {
           >
             <img
               src={cat.image}
+              loading="lazy" decoding="async"
               alt={cat.label}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
             />

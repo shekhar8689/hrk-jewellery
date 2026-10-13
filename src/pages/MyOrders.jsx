@@ -95,7 +95,7 @@ function OrderCard({ order, onCancel, cancelling }) {
           {order.items?.slice(0, 4).map((item, i) => (
             <div key={i} className="w-12 h-14 rounded-lg overflow-hidden bg-gray-100 border border-gray-100 shrink-0">
               {item.image ? (
-                <img src={getImageUrl(item.image)} alt={item.name} className="w-full h-full object-cover" />
+                <img src={getImageUrl(item.image, 200)} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-300 text-[9px]">IMG</div>
               )}
@@ -137,7 +137,7 @@ function OrderCard({ order, onCancel, cancelling }) {
               <div key={i} className="flex items-center gap-3">
                 <div className="w-14 h-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-100 shrink-0">
                   {item.image ? (
-                    <img src={getImageUrl(item.image)} alt={item.name} className="w-full h-full object-cover" />
+                    <img src={getImageUrl(item.image, 200)} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-300 text-[10px]">No img</div>
                   )}

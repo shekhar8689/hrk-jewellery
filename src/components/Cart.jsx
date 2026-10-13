@@ -62,7 +62,8 @@ export default function Cart({ open, onClose }) {
                     <Link to={productUrl} onClick={onClose} className="shrink-0">
                       {firstImage ? (
                         <img
-                          src={getImageUrl(firstImage)}
+                          src={getImageUrl(firstImage, 200)}
+                          loading="lazy" decoding="async"
                           alt={item.name}
                           className="w-20 h-24 object-cover bg-gray-50 border border-gray-100"
                         />

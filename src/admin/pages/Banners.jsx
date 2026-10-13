@@ -309,7 +309,8 @@ export default function Banners() {
                 <div className="sm:w-48 h-32 sm:h-auto shrink-0 bg-gray-100">
                   {banner.image ? (
                     <img
-                      src={getImageUrl(banner.image)}
+                      src={getImageUrl(banner.image, 600)}
+                      loading="lazy" decoding="async"
                       alt={banner.title}
                       className="w-full h-full object-cover"
                     />

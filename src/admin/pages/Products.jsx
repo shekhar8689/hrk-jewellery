@@ -380,7 +380,8 @@ export default function Products() {
                           {/* Thumbnail — always use getImageUrl */}
                           {p.images?.[0] ? (
                             <img
-                              src={getImageUrl(p.images[0])}
+                              src={getImageUrl(p.images[0], 120)}
+                              loading="lazy" decoding="async"
                               alt={p.name}
                               className="w-10 h-10 rounded-lg object-cover border border-gray-100"
                               onError={e => { e.target.style.opacity = '0.3' }}

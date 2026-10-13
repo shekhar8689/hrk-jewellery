@@ -14,11 +14,16 @@ exports.getAll = async (req, res) => {
     if (isBestseller !== undefined) filter.isBestseller = isBestseller === 'true'
 
     const pageSize = limit ? Math.min(Number(limit), 200) : DEFAULT_PAGE_SIZE
-    const total = await Product.countDocuments(filter)
-    const products = await Product.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
+    // Run the count and the page query at the same time; .lean() returns plain
+    // objects, which is much faster than full Mongoose documents for read-only lists
+    const [total, products] = await Promise.all([
+      Product.countDocuments(filter),
+      Product.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .lean(),
+    ])
 
     res.json({ products, total, pages: Math.ceil(total / pageSize), page: +page })
   } catch (err) {
@@ -28,7 +33,7 @@ exports.getAll = async (req, res) => {
 
 exports.getOne = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id)
+    const product = await Product.findById(req.params.id).lean()
     if (!product) return res.status(404).json({ message: 'Product not found' })
     res.json(product)
   } catch {

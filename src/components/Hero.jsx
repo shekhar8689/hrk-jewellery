@@ -66,7 +66,14 @@ export default function Hero() {
           key={s._id}
           className={`absolute inset-0 transition-opacity duration-1000 ${i === current ? 'opacity-100' : 'opacity-0'}`}
         >
-          <img src={getImageUrl(s.image)} alt={s.title} className="w-full h-full object-cover" />
+          <img
+            src={getImageUrl(s.image, 1920)}
+            alt={s.title}
+            className="w-full h-full object-cover"
+            loading={i === 0 ? 'eager' : 'lazy'}
+            fetchpriority={i === 0 ? 'high' : 'low'}
+            decoding="async"
+          />
           <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/20" />
         </div>
       ))}

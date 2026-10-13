@@ -23,5 +23,10 @@ const productSchema = new mongoose.Schema({
 }, { timestamps: true })
 
 productSchema.index({ name: 'text', description: 'text', category: 1 })
+// Indexes for the storefront's most common queries (home page, collections)
+productSchema.index({ isVisible: 1, createdAt: -1 })
+productSchema.index({ isVisible: 1, isBestseller: 1, createdAt: -1 })
+productSchema.index({ isVisible: 1, isNew: 1, createdAt: -1 })
+productSchema.index({ isVisible: 1, category: 1, createdAt: -1 })
 
 module.exports = mongoose.model('Product', productSchema)

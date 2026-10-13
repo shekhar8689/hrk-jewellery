@@ -86,7 +86,8 @@ function OrderDetail({ order, onClose, onStatusChange }) {
                 <div key={i} className="flex items-center gap-3">
                   {item.image && (
                     <img
-                      src={getImageUrl(item.image)}
+                      src={getImageUrl(item.image, 120)}
+                      loading="lazy" decoding="async"
                       alt={item.name}
                       className="w-12 h-12 object-cover rounded-lg border border-gray-100"
                     />

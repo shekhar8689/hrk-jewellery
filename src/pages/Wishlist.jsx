@@ -64,7 +64,7 @@ export default function Wishlist() {
             {/* Image */}
             <Link to={`/product/${item._id}`} className="block aspect-[3/4] overflow-hidden bg-gray-50 relative">
               {item.images?.[0] ? (
-                <img src={getImageUrl(item.images[0])} alt={item.name}
+                <img src={getImageUrl(item.images[0], 600)} alt={item.name} loading="lazy" decoding="async"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No image</div>
