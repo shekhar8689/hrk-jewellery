@@ -24,7 +24,8 @@ const CATEGORIES = [
   {
     id: 'bracelets',
     label: 'Bracelets',
-    image: 'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=600&q=80',
+    // Previous photo was removed from Unsplash; this is a free photo by Nataliya Melnychuk
+    image: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=600&q=80&auto=format&fit=crop',
   },
 ]
 
@@ -41,12 +42,15 @@ export default function Categories() {
           <Link
             key={cat.id}
             to={`/collections/${cat.id}`}
-            className="group relative overflow-hidden aspect-[4/5] md:aspect-[3/4] block bg-gray-200"
+            className="group relative overflow-hidden aspect-[4/5] md:aspect-[3/4] block bg-gradient-to-br from-[#efe2d2] via-[#d9b996] to-[#a9794f]"
           >
             <img
               src={cat.image}
               loading="lazy" decoding="async"
               alt={cat.label}
+              // If a photo ever fails to load, hide it so the warm gold
+              // background shows instead of a broken-image icon
+              onError={e => { e.currentTarget.style.display = 'none' }}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
             />
             {/* Gradient overlay */}
