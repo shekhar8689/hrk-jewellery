@@ -1,5 +1,9 @@
 const Banner = require('../models/Banner')
 
+// Cloudinary gives a full https URL in file.path; local disk gives a filename
+const fileToImage = (file) =>
+  /^https?:\/\//.test(file.path || '') ? file.path : `uploads/${file.filename}`
+
 exports.getAll = async (_req, res) => {
   try {
     const banners = await Banner.find().sort({ order: 1, createdAt: -1 })
@@ -21,8 +25,7 @@ exports.getActive = async (_req, res) => {
 exports.create = async (req, res) => {
   try {
     // Accept uploaded file (normalize path) or a pasted URL
-    const rawPath = req.file?.path || (req.file ? `uploads/${req.file.filename}` : '')
-    const image = rawPath ? rawPath.replace(/\\/g, '/') : (req.body.imageUrl || '')
+    const image = req.file ? fileToImage(req.file) : (req.body.imageUrl || '')
     if (!image) return res.status(400).json({ message: 'Image required (upload a file or paste a URL)' })
 
     const { imageUrl, ...rest } = req.body
@@ -38,8 +41,7 @@ exports.update = async (req, res) => {
     const { imageUrl, ...rest } = req.body
     const updates = { ...rest }
     if (req.file) {
-      const rawPath = req.file.path || `uploads/${req.file.filename}`
-      updates.image = rawPath.replace(/\\/g, '/')
+      updates.image = fileToImage(req.file)
     } else if (imageUrl) {
       updates.image = imageUrl
     }

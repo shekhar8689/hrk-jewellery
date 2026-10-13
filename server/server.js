@@ -18,15 +18,19 @@ connectDB().then(seedAdmin)
 const app = express()
 
 /* ── CORS: allow the frontend origin ── */
+// FRONTEND_URL may hold several comma-separated origins; trailing slashes are ignored
+const normalizeOrigin = (o) => o.trim().replace(/\/+$/, '')
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
+  ...(process.env.FRONTEND_URL || '').split(',').filter(Boolean).map(normalizeOrigin),
   'http://localhost:5173',
   'http://localhost:3000',
 ]
 app.use(cors({
   origin: (origin, cb) => {
     // Allow requests with no origin (mobile apps, curl, Postman)
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+    if (!origin || allowedOrigins.includes(normalizeOrigin(origin))) return cb(null, true)
+    // Allow this project's Vercel preview deployments
+    if (/^https:\/\/hrk-jewellery[a-z0-9-]*\.vercel\.app$/.test(origin)) return cb(null, true)
     cb(new Error('Not allowed by CORS'))
   },
   credentials: true,
@@ -60,7 +64,17 @@ app.use('/api/admin/reviews',  require('./routes/adminReviews'))
 app.use('/api/coupons',        require('./routes/coupons'))
 
 /* ── Health check ── */
-app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }))
+const { useCloudinary } = require('./config/cloudinary')
+if (!useCloudinary) {
+  console.warn('⚠️  Cloudinary is NOT configured — uploads are saved to local disk.' +
+    ' On Render this disk is wiped on every deploy/restart, so images will disappear.' +
+    ' Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET.')
+}
+app.get('/api/health', (_, res) => res.json({
+  status: 'ok',
+  time: new Date(),
+  imageStorage: useCloudinary ? 'cloudinary' : 'local-disk (not persistent on Render)',
+}))
 
 /* ── Global error handler ── */
 app.use((err, _req, res, _next) => {
@@ -71,19 +85,40 @@ app.use((err, _req, res, _next) => {
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => console.log(`\n🚀 Server running on http://localhost:${PORT}\n`))
 
-/* ── Seed admin account from .env if not already in DB ── */
+/* ── Ensure the admin account in the DB matches ADMIN_EMAIL / ADMIN_PASSWORD ──
+ * Previously this only created the admin when missing, so if an admin already
+ * existed in Atlas with a different (older) password, the password set on Render
+ * never took effect and login returned 401. The env vars are now the source of
+ * truth: on every boot the admin is created, or its password/role is synced.
+ */
 async function seedAdmin() {
   try {
     const User     = require('./models/User')
-    const email    = process.env.ADMIN_EMAIL
+    const email    = (process.env.ADMIN_EMAIL || '').toLowerCase().trim()
     const password = process.env.ADMIN_PASSWORD
     const name     = process.env.ADMIN_NAME || 'Admin'
-    if (!email || !password) return
+    if (!email || !password) {
+      console.warn('⚠️  ADMIN_EMAIL / ADMIN_PASSWORD not set — admin account not created or synced')
+      return
+    }
 
-    const exists = await User.findOne({ email })
-    if (!exists) {
+    const user = await User.findOne({ email })
+    if (!user) {
       await User.create({ name, email, password, role: 'admin' })
       console.log(`✅ Admin account created: ${email}`)
+      return
+    }
+
+    let changed = false
+    if (user.role !== 'admin') { user.role = 'admin'; changed = true }
+    if (!user.isActive)        { user.isActive = true; changed = true }
+    if (!(await user.comparePassword(password))) {
+      user.password = password            // hashed by the pre-save hook
+      changed = true
+    }
+    if (changed) {
+      await user.save()
+      console.log(`✅ Admin account synced with env: ${email}`)
     }
   } catch (err) {
     console.error('Admin seed error:', err.message)
