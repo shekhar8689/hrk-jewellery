@@ -5,6 +5,7 @@ import AdminLayout from '../components/AdminLayout'
 import Pagination from '../components/Pagination'
 import Toast from '../../components/Toast'
 import { api } from '../api'
+import { getImageUrl } from '../../utils/image'
 
 const STATUS_COLOR = {
   pending:   'bg-yellow-100 text-yellow-700',
@@ -85,7 +86,7 @@ function OrderDetail({ order, onClose, onStatusChange }) {
                 <div key={i} className="flex items-center gap-3">
                   {item.image && (
                     <img
-                      src={item.image}
+                      src={getImageUrl(item.image)}
                       alt={item.name}
                       className="w-12 h-12 object-cover rounded-lg border border-gray-100"
                     />

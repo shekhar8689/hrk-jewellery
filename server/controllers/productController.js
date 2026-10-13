@@ -56,10 +56,10 @@ exports.create = async (req, res) => {
     if (!req.body.description || String(req.body.description).trim().length < 10)
       return res.status(400).json({ message: 'Description must be at least 10 characters' })
 
-    const uploadedImages = req.files?.map(f => {
-      const p = f.path || `uploads/${f.filename}`
-      return p.replace(/\\/g, '/')
-    }) || []
+    const uploadedImages = req.files?.map(f =>
+      // Cloudinary gives a full https URL in f.path; local disk gives a filename
+      (/^https?:\/\//.test(f.path || '') ? f.path : `uploads/${f.filename}`)
+    ) || []
     const urlImages = req.body.imageUrls
       ? req.body.imageUrls.split('\n').map(s => s.trim()).filter(Boolean)
       : []
@@ -86,7 +86,10 @@ exports.update = async (req, res) => {
 
     const updates = { ...req.body }
 
-    const uploadedImages = req.files?.map(f => f.path || `/uploads/${f.filename}`) || []
+    const uploadedImages = req.files?.map(f =>
+      // Cloudinary gives a full https URL in f.path; local disk gives a filename
+      (/^https?:\/\//.test(f.path || '') ? f.path : `uploads/${f.filename}`)
+    ) || []
     const urlImages = updates.imageUrls
       ? updates.imageUrls.split('\n').map(s => s.trim()).filter(Boolean)
       : []
