@@ -38,7 +38,7 @@ export default function Footer() {
   return (
     <footer className="bg-[#0E0E0E] text-gray-400">
       {/* Newsletter */}
-      <div className="border-b border-white/5 py-14 px-4">
+      <div className="border-b border-white/5 py-10 md:py-14 px-4">
         <div className="max-w-xl mx-auto text-center">
           <p className="text-[10px] text-gold-500 tracking-[0.3em] uppercase mb-3">Stay Connected</p>
           <h3 className="font-serif text-3xl text-white font-light mb-3 tracking-wide">Join the HRK Family</h3>
@@ -51,9 +51,9 @@ export default function Footer() {
             <form onSubmit={handleSubscribe} className="flex max-w-md mx-auto">
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="Your email address"
-                className="flex-1 px-5 py-3.5 text-sm text-gray-800 bg-white focus:outline-none placeholder-gray-400" />
+                className="flex-1 min-w-0 px-4 sm:px-5 py-3.5 text-sm text-gray-800 bg-white focus:outline-none placeholder-gray-400" />
               <button type="submit"
-                className="bg-gold-500 hover:bg-gold-600 text-white px-7 text-[10px] tracking-[0.2em] uppercase font-semibold transition-colors">
+                className="shrink-0 bg-gold-500 hover:bg-gold-600 text-white px-4 sm:px-7 text-[10px] tracking-[0.15em] sm:tracking-[0.2em] uppercase font-semibold transition-colors">
                 Subscribe
               </button>
             </form>
@@ -62,20 +62,20 @@ export default function Footer() {
       </div>
 
       {/* Main footer */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 py-10 md:py-16">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-6 gap-y-8 md:gap-10">
           {/* Brand */}
-          <div className="col-span-2">
+          <div className="col-span-2 sm:col-span-3 md:col-span-2">
             <Link to="/" className="font-serif text-xl text-white tracking-[0.2em] uppercase font-light">
               HRK <span className="text-gold-500">Jewellery</span>
             </Link>
             <p className="text-sm text-gray-500 mt-4 max-w-xs leading-relaxed">
               Fine jewellery for the modern woman. Tarnish-free, water-resistant, and thoughtfully crafted to last a lifetime.
             </p>
-            <div className="flex gap-4 mt-6">
+            <div className="flex gap-3 mt-5 md:mt-6">
               {[Instagram, Facebook, Youtube, Twitter].map((Icon, i) => (
                 <a key={i} href="#" aria-label="Social media"
-                  className="w-8 h-8 border border-white/10 flex items-center justify-center text-gray-500 hover:text-gold-400 hover:border-gold-500 transition-all">
+                  className="w-10 h-10 md:w-8 md:h-8 border border-white/10 flex items-center justify-center text-gray-500 hover:text-gold-400 hover:border-gold-500 transition-all">
                   <Icon size={15} />
                 </a>
               ))}
@@ -90,11 +90,11 @@ export default function Footer() {
           {/* Links */}
           {Object.entries(links).map(([title, items]) => (
             <div key={title}>
-              <h4 className="text-white text-[10px] uppercase tracking-[0.2em] font-semibold mb-5">{title}</h4>
-              <ul className="space-y-3">
+              <h4 className="text-white text-[10px] uppercase tracking-[0.2em] font-semibold mb-3 md:mb-5">{title}</h4>
+              <ul className="space-y-1 md:space-y-3">
                 {items.map(item => (
                   <li key={item.label}>
-                    <Link to={item.to} className="text-sm text-gray-500 hover:text-gold-400 transition-colors">
+                    <Link to={item.to} className="inline-block py-1.5 md:py-0 text-sm text-gray-500 hover:text-gold-400 transition-colors">
                       {item.label}
                     </Link>
                   </li>
@@ -106,13 +106,13 @@ export default function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-white/5 px-6 py-5">
+      <div className="border-t border-white/5 px-5 sm:px-6 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3 text-[11px] text-gray-600">
-          <p>© 2025 HRK Jewellery. All rights reserved.</p>
-          <div className="flex gap-6">
-            <Link to="/privacy-policy" className="hover:text-gray-400 transition-colors">Privacy Policy</Link>
-            <Link to="/terms"          className="hover:text-gray-400 transition-colors">Terms of Service</Link>
-            <Link to="/return-policy"  className="hover:text-gray-400 transition-colors">Returns</Link>
+          <p>© {new Date().getFullYear()} HRK Jewellery. All rights reserved.</p>
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+            <Link to="/privacy-policy" className="inline-block py-2 hover:text-gray-400 transition-colors">Privacy Policy</Link>
+            <Link to="/terms"          className="inline-block py-2 hover:text-gray-400 transition-colors">Terms of Service</Link>
+            <Link to="/return-policy"  className="inline-block py-2 hover:text-gray-400 transition-colors">Returns</Link>
           </div>
         </div>
       </div>
