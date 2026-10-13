@@ -9,7 +9,7 @@ export default function ShippingPolicy() {
       <p className="text-xs text-gray-400 mb-10">Last updated: January 2025</p>
 
       {/* Quick reference cards */}
-      <div className="grid sm:grid-cols-2 gap-4 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
         {[
           { icon: Truck, title: 'Free Shipping', desc: 'On all orders above ₹999' },
           { icon: Clock, title: 'Processing Time', desc: '1–2 business days' },

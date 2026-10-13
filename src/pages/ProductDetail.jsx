@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   Star, Heart, ShoppingBag, Shield, RefreshCw, Truck,
@@ -365,6 +365,20 @@ export default function ProductDetail({ onCartOpen }) {
   const [added, setAdded]             = useState(false)
   const [copied, setCopied]           = useState(false)
   const [toast, setToast]             = useState(null)
+  const [showStickyBar, setShowStickyBar] = useState(false)
+  const addBtnRef = useRef(null)
+
+  // Phones: show a bottom "Add to Bag" bar once the main button scrolls out of view
+  useEffect(() => {
+    const el = addBtnRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting && entry.boundingClientRect.top < 0),
+      { threshold: 0 }
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [product, loading])
 
   useEffect(() => {
     setLoading(true); setNotFound(false); setImgIdx(0); setQty(1)
@@ -427,7 +441,7 @@ export default function ProductDetail({ onCartOpen }) {
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-10">
-        <div className="grid md:grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="animate-pulse bg-gray-200 aspect-[3/4] rounded-lg" />
           <div className="space-y-4 pt-4">
             <div className="animate-pulse bg-gray-200 h-7 w-2/3 rounded" />
@@ -463,24 +477,25 @@ export default function ProductDetail({ onCartOpen }) {
   const images = product.images || []
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-10">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-24 md:py-10">
       {/* Breadcrumb */}
-      <nav className="text-xs text-gray-400 mb-6 flex gap-2 flex-wrap" aria-label="Breadcrumb">
+      <nav className="text-xs text-gray-400 mb-4 md:mb-6 flex gap-2 min-w-0" aria-label="Breadcrumb">
         <Link to="/" className="hover:text-gold-500">Home</Link>
         <span>/</span>
         <Link to={`/collections/${product.category}`} className="hover:text-gold-500 capitalize">{product.category}</Link>
         <span>/</span>
-        <span className="text-gray-700">{product.name}</span>
+        <span className="text-gray-700 truncate">{product.name}</span>
       </nav>
 
-      <div className="grid md:grid-cols-2 gap-10 lg:gap-16">
-        {/* Image gallery */}
-        <div className="flex gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 lg:gap-16">
+        {/* Image gallery — thumbnails below on phones, beside on larger screens */}
+        <div className="flex flex-col-reverse md:flex-row gap-3 -mx-4 sm:mx-0">
           {images.length > 1 && (
-            <div className="flex flex-col gap-2">
+            <div className="flex md:flex-col gap-2 px-4 sm:px-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {images.map((img, i) => (
                 <button key={i} onClick={() => setImgIdx(i)}
-                  className={`w-16 h-20 overflow-hidden border-2 transition-colors ${i === imgIdx ? 'border-gold-500' : 'border-transparent hover:border-gray-200'}`}>
+                  aria-label={`Show photo ${i + 1}`}
+                  className={`shrink-0 w-16 h-20 overflow-hidden border-2 transition-colors ${i === imgIdx ? 'border-gold-500' : 'border-transparent hover:border-gray-200'}`}>
                   <img src={getImageUrl(img, 160)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </button>
               ))}
@@ -509,7 +524,7 @@ export default function ProductDetail({ onCartOpen }) {
             {outOfStock          && <span className="text-[10px] bg-red-500 text-white px-3 py-1 tracking-widest uppercase">Out of Stock</span>}
           </div>
 
-          <h1 className="font-serif text-2xl md:text-3xl text-gray-800 mb-1">{product.name}</h1>
+          <h1 className="font-serif text-[1.65rem] leading-tight md:text-3xl text-gray-800 mb-1">{product.name}</h1>
           {product.material && <p className="text-xs text-gold-600 uppercase tracking-widest mb-4">{product.material}</p>}
 
           {/* Rating summary */}
@@ -579,17 +594,17 @@ export default function ProductDetail({ onCartOpen }) {
           )}
 
           {/* Qty + Add to bag */}
-          <div className="flex gap-3 mb-4">
+          <div ref={addBtnRef} className="flex gap-3 mb-4">
             <div className={`flex items-center border border-gray-300 ${outOfStock ? 'opacity-40' : ''}`}>
-              <button className="px-3 py-3 hover:bg-gray-50 disabled:cursor-not-allowed"
+              <button aria-label="Decrease quantity" className="w-11 h-12 hover:bg-gray-50 disabled:cursor-not-allowed"
                 onClick={() => setQty(q => Math.max(1, q - 1))} disabled={outOfStock}>−</button>
-              <span className="px-4 text-sm">{qty}</span>
-              <button className="px-3 py-3 hover:bg-gray-50 disabled:cursor-not-allowed"
+              <span className="w-8 text-center text-sm">{qty}</span>
+              <button aria-label="Increase quantity" className="w-11 h-12 hover:bg-gray-50 disabled:cursor-not-allowed"
                 onClick={() => setQty(q => Math.min(q + 1, product.stock))}
                 disabled={outOfStock || qty >= product.stock}>+</button>
             </div>
             <button onClick={handleAdd} disabled={outOfStock}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm tracking-widest uppercase font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 text-sm tracking-wider sm:tracking-widest uppercase font-medium transition-colors ${
                 outOfStock ? 'bg-gray-200 text-gray-400 cursor-not-allowed' :
                 added      ? 'bg-green-600 text-white' : 'btn-gold'}`}>
               <ShoppingBag size={16} />
@@ -600,14 +615,14 @@ export default function ProductDetail({ onCartOpen }) {
           {/* Wishlist + Share row */}
           <div className="flex gap-3 mb-6">
             <button onClick={handleWishlist}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm border rounded-xl transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3 md:py-2.5 text-sm border rounded-xl transition-colors ${
                 wished ? 'border-red-300 bg-red-50 text-red-600' : 'border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500'}`}
               aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}>
               <Heart size={16} className={wished ? 'fill-red-500' : ''} />
               {wished ? 'Wishlisted' : 'Add to Wishlist'}
             </button>
             <button onClick={handleShare}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm border border-gray-200 rounded-xl text-gray-500 hover:border-gray-300 transition-colors"
+              className="flex items-center gap-2 px-4 py-3 md:py-2.5 text-sm border border-gray-200 rounded-xl text-gray-500 hover:border-gray-300 transition-colors"
               aria-label="Share product">
               <Share2 size={15} />
               {copied ? 'Copied!' : 'Share'}
@@ -655,16 +670,35 @@ export default function ProductDetail({ onCartOpen }) {
 
       {/* Related products */}
       {related.length > 0 && (
-        <section className="mt-20">
-          <div className="text-center mb-8">
+        <section className="mt-12 md:mt-20">
+          <div className="text-center mb-6 md:mb-8">
             <p className="section-subtitle">You May Also Like</p>
             <h2 className="section-title">Related Products</h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {related.map(p => <ProductCard key={p._id} product={p} />)}
           </div>
         </section>
       )}
+
+      {/* Phones: sticky Add to Bag bar */}
+      <div
+        className={`md:hidden fixed inset-x-0 bottom-0 z-40 bg-white/95 backdrop-blur border-t border-gray-200 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center gap-3 transition-transform duration-300 ${
+          showStickyBar ? 'translate-y-0' : 'translate-y-full'
+        }`}
+        aria-hidden={!showStickyBar}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-gray-500 truncate">{product.name}{selectedSize ? ` · Size ${selectedSize}` : ''}</p>
+          <p className="text-base font-semibold text-gray-900">₹{product.price?.toLocaleString('en-IN')}</p>
+        </div>
+        <button onClick={handleAdd} disabled={outOfStock} tabIndex={showStickyBar ? 0 : -1}
+          className={`shrink-0 flex items-center gap-2 px-5 h-12 text-xs tracking-widest uppercase font-semibold transition-colors ${
+            outOfStock ? 'bg-gray-200 text-gray-400' : added ? 'bg-green-600 text-white' : 'bg-gold-500 text-white active:bg-gold-600'}`}>
+          <ShoppingBag size={15} />
+          {outOfStock ? 'Out of Stock' : added ? 'Added!' : 'Add to Bag'}
+        </button>
+      </div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </main>

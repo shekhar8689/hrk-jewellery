@@ -30,8 +30,8 @@ const CATEGORIES = [
 
 export default function Categories() {
   return (
-    <section className="py-16 px-6 max-w-7xl mx-auto">
-      <div className="text-center mb-12">
+    <section className="py-10 md:py-16 px-4 sm:px-6 max-w-7xl mx-auto">
+      <div className="text-center mb-6 md:mb-12">
         <p className="section-subtitle">Explore</p>
         <h2 className="section-title">Shop by Category</h2>
       </div>
@@ -41,7 +41,7 @@ export default function Categories() {
           <Link
             key={cat.id}
             to={`/collections/${cat.id}`}
-            className="group relative overflow-hidden aspect-[3/4] block"
+            className="group relative overflow-hidden aspect-[4/5] md:aspect-[3/4] block bg-gray-200"
           >
             <img
               src={cat.image}
@@ -54,8 +54,8 @@ export default function Categories() {
             {/* Hover gold tint */}
             <div className="absolute inset-0 bg-gold-600/0 group-hover:bg-gold-600/15 transition-all duration-500" />
 
-            <div className="absolute bottom-0 left-0 right-0 p-5">
-              <p className="font-serif text-xl text-white font-light tracking-wide">{cat.label}</p>
+            <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5">
+              <p className="font-serif text-lg sm:text-xl text-white font-light tracking-wide">{cat.label}</p>
               <div className="h-px bg-gold-400 mt-3 w-0 group-hover:w-10 transition-all duration-500" />
             </div>
           </Link>

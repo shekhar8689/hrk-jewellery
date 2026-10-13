@@ -3,8 +3,26 @@
 @tailwind utilities;
 
 @layer base {
+  /* Never let anything push the page sideways on phones.
+     `clip` (unlike `hidden`) keeps sticky headers working. */
+  html, body {
+    overflow-x: clip;
+    max-width: 100%;
+  }
   body {
     @apply bg-cream font-sans text-gray-800 antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  img { max-width: 100%; }
+
+  /* iPhones zoom into any form field with text smaller than 16px.
+     Use 16px on small screens so tapping a field doesn't zoom the page. */
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
 }
 
@@ -19,10 +37,10 @@
     @apply bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-8 transition-all duration-200 tracking-widest text-xs uppercase;
   }
   .section-title {
-    @apply font-serif text-4xl md:text-5xl text-gray-900 mb-2 font-light tracking-wide;
+    @apply font-serif text-[2rem] leading-tight sm:text-4xl md:text-5xl text-gray-900 mb-2 font-light tracking-wide;
   }
   .section-subtitle {
-    @apply text-xs text-gold-600 tracking-[0.25em] uppercase mb-4 font-medium;
+    @apply text-[11px] sm:text-xs text-gold-600 tracking-[0.2em] sm:tracking-[0.25em] uppercase mb-2 sm:mb-4 font-medium;
   }
 }
 

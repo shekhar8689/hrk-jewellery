@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ShoppingBag, Truck, CreditCard, CheckCircle, X, ChevronRight, AlertTriangle, Tag, Loader2 } from 'lucide-react'
 import { useCart }     from '../context/CartContext'
@@ -62,6 +62,8 @@ export default function Checkout() {
     pincode: '',
   })
   const [fieldErrors, setFieldErrors] = useState({})
+  const errorRef = useRef(null)
+
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); if (fieldErrors[k]) setFieldErrors(fe => ({ ...fe, [k]: '' })) }
 
   const [paymentMethod, setPaymentMethod] = useState('cod')
@@ -74,6 +76,17 @@ export default function Checkout() {
   const [couponLoading, setCouponLoading] = useState(false)
   const [couponError,   setCouponError]   = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState(null)  // { code, discount, description }
+
+  // On phones the form is long: bring errors into view so customers see them
+  useEffect(() => {
+    if (error && errorRef.current) errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [error])
+  useEffect(() => {
+    const first = Object.keys(fieldErrors).find(k => fieldErrors[k])
+    if (!first) return
+    const el = document.querySelector(`form [name="${first}"]`)
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus({ preventScroll: true }) }
+  }, [fieldErrors])
 
   useEffect(() => { document.title = 'Checkout — HRK Jewellery'; return () => { document.title = 'HRK Jewellery' } }, [])
 
@@ -269,8 +282,8 @@ export default function Checkout() {
 
   /* ── Main Form ─────────────────────────────────────────────────────────────── */
   return (
-    <main className="max-w-6xl mx-auto px-4 py-10">
-      <nav className="text-xs text-gray-400 mb-8 flex items-center gap-2">
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-10">
+      <nav className="text-xs text-gray-400 mb-4 md:mb-8 flex items-center gap-2">
         <Link to="/" className="hover:text-gold-500">Home</Link>
         <ChevronRight size={12} />
         <Link to="/collections" className="hover:text-gold-500">Collections</Link>
@@ -278,7 +291,7 @@ export default function Checkout() {
         <span className="text-gray-700">Checkout</span>
       </nav>
 
-      <h1 className="font-serif text-3xl text-gray-800 mb-8">Checkout</h1>
+      <h1 className="font-serif text-[1.75rem] sm:text-3xl text-gray-800 mb-5 md:mb-8">Checkout</h1>
 
       {user && (
         <div className="bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
@@ -288,63 +301,63 @@ export default function Checkout() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6 flex items-start gap-2">
+        <div ref={errorRef} role="alert" className="scroll-mt-24 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6 flex items-start gap-2">
           <AlertTriangle size={16} className="shrink-0 mt-0.5" /> {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} noValidate>
-        <div className="grid lg:grid-cols-[1fr_400px] gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] gap-5 md:gap-8 items-start">
 
           {/* Left */}
-          <div className="space-y-6">
+          <div className="space-y-5 md:space-y-6 min-w-0">
             {/* Delivery */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-6">
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-6">
                 <span className="w-7 h-7 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">1</span>
                 <h2 className="font-semibold text-gray-900">Delivery Details</h2>
               </div>
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <Field label="Full Name" required error={fieldErrors.name}>
                     <input required value={form.name} onChange={e => set('name', e.target.value)}
-                      placeholder="e.g. Priya Sharma" maxLength={100}
+                      placeholder="e.g. Priya Sharma" maxLength={100} autoComplete="name" name="name"
                       className={fieldErrors.name ? inputErrorClass : inputClass} />
                   </Field>
                 </div>
                 <Field label="Phone Number" required error={fieldErrors.phone}>
-                  <input required type="tel" inputMode="numeric" value={form.phone}
+                  <input required type="tel" inputMode="numeric" autoComplete="tel-national" name="phone" value={form.phone}
                     onChange={e => set('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
                     placeholder="10-digit mobile number"
                     className={fieldErrors.phone ? inputErrorClass : inputClass} />
                 </Field>
                 <Field label="Email" error={fieldErrors.email}>
-                  <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
+                  <input type="email" inputMode="email" autoComplete="email" name="email" value={form.email} onChange={e => set('email', e.target.value)}
                     placeholder="For order updates (optional)"
                     className={fieldErrors.email ? inputErrorClass : inputClass} />
                 </Field>
                 <div className="sm:col-span-2">
                   <Field label="Street Address" required error={fieldErrors.street}>
                     <input required value={form.street} onChange={e => set('street', e.target.value)}
-                      placeholder="House / Flat no., Building, Street, Area" maxLength={200}
+                      placeholder="House / Flat no., Building, Street, Area" maxLength={200} autoComplete="street-address" name="street"
                       className={fieldErrors.street ? inputErrorClass : inputClass} />
                   </Field>
                 </div>
                 <Field label="City" required error={fieldErrors.city}>
                   <input required value={form.city}
                     onChange={e => set('city', e.target.value.replace(/[^a-zA-Z\s\-]/g, '').slice(0, 50))}
-                    placeholder="e.g. Mumbai"
+                    placeholder="e.g. Mumbai" autoComplete="address-level2" name="city"
                     className={fieldErrors.city ? inputErrorClass : inputClass} />
                 </Field>
                 <Field label="Pincode" required error={fieldErrors.pincode}>
-                  <input required type="text" inputMode="numeric" value={form.pincode}
+                  <input required type="text" inputMode="numeric" autoComplete="postal-code" name="pincode" value={form.pincode}
                     onChange={e => set('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="6-digit pincode"
                     className={fieldErrors.pincode ? inputErrorClass : inputClass} />
                 </Field>
                 <div className="sm:col-span-2">
                   <Field label="State" required>
-                    <select required value={form.state} onChange={e => set('state', e.target.value)} className={inputClass}>
+                    <select required value={form.state} onChange={e => set('state', e.target.value)} autoComplete="address-level1" name="state" className={inputClass}>
                       {STATES.map(s => <option key={s}>{s}</option>)}
                     </select>
                   </Field>
@@ -353,7 +366,7 @@ export default function Checkout() {
             </div>
 
             {/* Payment method */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-6">
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-6">
                 <span className="w-7 h-7 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">2</span>
                 <h2 className="font-semibold text-gray-900">Payment Method</h2>
@@ -382,8 +395,8 @@ export default function Checkout() {
           </div>
 
           {/* Right — Order summary */}
-          <div className="lg:sticky lg:top-24">
-            <div className="bg-white border border-gray-100 rounded-2xl p-6">
+          <div className="lg:sticky lg:top-24 min-w-0">
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6">
               <h2 className="font-semibold text-gray-900 mb-5">Order Summary</h2>
 
               {/* Items */}
@@ -429,10 +442,10 @@ export default function Checkout() {
                         onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError('') }}
                         onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), applyCoupon())}
                         placeholder="Coupon code"
-                        className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 uppercase"
+                        className="flex-1 min-w-0 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 uppercase"
                       />
                       <button type="button" onClick={applyCoupon} disabled={couponLoading || !couponInput.trim()}
-                        className="px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors flex items-center gap-1.5">
+                        className="shrink-0 px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors flex items-center gap-1.5">
                         {couponLoading ? <Loader2 size={14} className="animate-spin" /> : <Tag size={14} />}
                         Apply
                       </button>
