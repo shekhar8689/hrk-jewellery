@@ -1,0 +1,18 @@
+# Keeps the free Render backend awake so visitors don't wait ~1 minute
+# for it to start. Pings the health endpoint every 10 minutes.
+# Note: GitHub pauses scheduled jobs after 60 days with no commits to the
+# repo; re-enable it from the Actions tab if that happens.
+name: Keep server awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping backend
+        run: curl -fsS --max-time 120 --retry 2 https://hrk-jewellery.onrender.com/api/health || true

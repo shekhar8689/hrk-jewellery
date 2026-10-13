@@ -1,6 +1,7 @@
 require('dotenv').config()
 const express  = require('express')
 const cors     = require('cors')
+const compression = require('compression')
 const path     = require('path')
 const fs       = require('fs')
 const connectDB = require('./config/db')
@@ -36,6 +37,7 @@ app.use(cors({
   credentials: true,
 }))
 
+app.use(compression())   // gzip API responses (product lists shrink ~70–80%)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
@@ -52,12 +54,28 @@ app.use((_, res, next) => {
 /* ── Serve uploaded files as static assets ── */
 app.use('/uploads', express.static(uploadsDir))
 
+/* ── Short browser/CDN caching for public, logged-out GET requests ──
+ * Product and banner lists change rarely, so letting browsers reuse them for a
+ * minute makes page-to-page navigation much faster. Requests that carry an
+ * Authorization header (admin panel, logged-in users) are never cached, so the
+ * admin always sees fresh data right after an edit.
+ */
+const publicCache = (req, res, next) => {
+  if (req.method === 'GET' && !req.headers.authorization) {
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
+  } else {
+    res.setHeader('Cache-Control', 'no-store')
+  }
+  res.setHeader('Vary', 'Authorization, Origin')
+  next()
+}
+
 /* ── API routes ── */
 app.use('/api/auth',      require('./routes/auth'))
-app.use('/api/products',  require('./routes/products'))
+app.use('/api/products',  publicCache, require('./routes/products'))
 app.use('/api/orders',    require('./routes/orders'))
 app.use('/api/users',     require('./routes/users'))
-app.use('/api/banners',   require('./routes/banners'))
+app.use('/api/banners',   publicCache, require('./routes/banners'))
 app.use('/api/dashboard', require('./routes/dashboard'))
 app.use('/api/reviews',        require('./routes/reviews'))
 app.use('/api/admin/reviews',  require('./routes/adminReviews'))

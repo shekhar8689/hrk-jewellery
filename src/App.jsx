@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
 import { CartProvider }      from './context/CartContext'
 import { AdminAuthProvider } from './admin/context/AdminAuthContext'
@@ -12,36 +12,44 @@ import Cart   from './components/Cart'
 
 /* Public pages */
 import Home          from './pages/Home'
-import Collections   from './pages/Collections'
-import ProductDetail from './pages/ProductDetail'
-import Checkout      from './pages/Checkout'
-import OrderSuccess  from './pages/OrderSuccess'
-import Login         from './pages/Login'
-import Register      from './pages/Register'
-import MyOrders      from './pages/MyOrders'
-import Wishlist      from './pages/Wishlist'
-import ForgotPassword from './pages/ForgotPassword'
-import ResetPassword  from './pages/ResetPassword'
+const Collections = lazy(() => import('./pages/Collections'))
+const ProductDetail = lazy(() => import('./pages/ProductDetail'))
+const Checkout = lazy(() => import('./pages/Checkout'))
+const OrderSuccess = lazy(() => import('./pages/OrderSuccess'))
+const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
+const MyOrders = lazy(() => import('./pages/MyOrders'))
+const Wishlist = lazy(() => import('./pages/Wishlist'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 
 /* Static / info pages */
-import About          from './pages/About'
-import Contact        from './pages/Contact'
-import PrivacyPolicy  from './pages/PrivacyPolicy'
-import TermsConditions from './pages/TermsConditions'
-import ShippingPolicy  from './pages/ShippingPolicy'
-import ReturnPolicy    from './pages/ReturnPolicy'
-import FAQ             from './pages/FAQ'
+const About = lazy(() => import('./pages/About'))
+const Contact = lazy(() => import('./pages/Contact'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
+const TermsConditions = lazy(() => import('./pages/TermsConditions'))
+const ShippingPolicy = lazy(() => import('./pages/ShippingPolicy'))
+const ReturnPolicy = lazy(() => import('./pages/ReturnPolicy'))
+const FAQ = lazy(() => import('./pages/FAQ'))
 
 /* Admin pages */
-import AdminLogin    from './admin/pages/AdminLogin'
-import Dashboard     from './admin/pages/Dashboard'
-import Products      from './admin/pages/Products'
-import Orders        from './admin/pages/Orders'
-import AdminUsers    from './admin/pages/AdminUsers'
-import Banners       from './admin/pages/Banners'
-import AdminReviews  from './admin/pages/Reviews'
-import AdminCoupons  from './admin/pages/Coupons'
+const AdminLogin = lazy(() => import('./admin/pages/AdminLogin'))
+const Dashboard = lazy(() => import('./admin/pages/Dashboard'))
+const Products = lazy(() => import('./admin/pages/Products'))
+const Orders = lazy(() => import('./admin/pages/Orders'))
+const AdminUsers = lazy(() => import('./admin/pages/AdminUsers'))
+const Banners = lazy(() => import('./admin/pages/Banners'))
+const AdminReviews = lazy(() => import('./admin/pages/Reviews'))
+const AdminCoupons = lazy(() => import('./admin/pages/Coupons'))
 import ProtectedRoute from './admin/components/ProtectedRoute'
+
+
+/* Shown for a moment while a page's code downloads */
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <div className="w-8 h-8 border-2 border-gray-200 border-t-amber-500 rounded-full animate-spin" />
+  </div>
+)
 
 /* ─── Public site wrapper ──────────────────────────────────────────────────── */
 function PublicSite() {
@@ -54,6 +62,7 @@ function PublicSite() {
         <Cart open={cartOpen} onClose={() => setCartOpen(false)} />
 
         <div className="flex-1">
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/"                      element={<Home />} />
             <Route path="/collections"           element={<Collections />} />
@@ -86,6 +95,7 @@ function PublicSite() {
               </div>
             } />
           </Routes>
+          </Suspense>
         </div>
 
         <Footer />
@@ -100,6 +110,7 @@ export default function App() {
     <UserAuthProvider>
       <WishlistProvider>
         <AdminAuthProvider>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Admin routes */}
             <Route path="/admin/login"     element={<AdminLogin />} />
@@ -114,6 +125,7 @@ export default function App() {
             {/* Everything else → public site */}
             <Route path="/*" element={<PublicSite />} />
           </Routes>
+          </Suspense>
         </AdminAuthProvider>
       </WishlistProvider>
     </UserAuthProvider>

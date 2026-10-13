@@ -481,14 +481,14 @@ export default function ProductDetail({ onCartOpen }) {
               {images.map((img, i) => (
                 <button key={i} onClick={() => setImgIdx(i)}
                   className={`w-16 h-20 overflow-hidden border-2 transition-colors ${i === imgIdx ? 'border-gold-500' : 'border-transparent hover:border-gray-200'}`}>
-                  <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
+                  <img src={getImageUrl(img, 160)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
           )}
           <div className="flex-1 aspect-[3/4] overflow-hidden bg-gray-50 relative group">
             {images[imgIdx] ? (
-              <img src={getImageUrl(images[imgIdx])} alt={product.name}
+              <img src={getImageUrl(images[imgIdx], 1200)} alt={product.name} fetchpriority="high"
                 className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${outOfStock ? 'opacity-50' : ''}`} />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">No image</div>

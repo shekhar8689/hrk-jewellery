@@ -48,7 +48,8 @@ export default function ProductCard({ product }) {
       <div className="relative overflow-hidden aspect-[3/4] bg-gray-50">
         {images[imgIdx] || images[0] ? (
           <img
-            src={getImageUrl(images[imgIdx] || images[0])}
+            src={getImageUrl(images[imgIdx] || images[0], 600)}
+            loading="lazy" decoding="async"
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
           />
