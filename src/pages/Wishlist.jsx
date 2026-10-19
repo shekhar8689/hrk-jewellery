@@ -7,6 +7,8 @@ import { getImageUrl } from '../utils/image'
 import Toast           from '../components/Toast'
 import { useState }    from 'react'
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
 function StarDisplay({ rating }) {
   return (
     <div className="flex gap-0.5">
@@ -19,18 +21,50 @@ function StarDisplay({ rating }) {
 
 export default function Wishlist() {
   const { items, removeFromWishlist, clearWishlist } = useWishlist()
-  const { dispatch } = useCart()
+  const { items: cartItems, dispatch } = useCart()
   const [toast, setToast] = useState(null)
+  const [movingId, setMovingId] = useState(null)
 
   useEffect(() => {
     document.title = `Wishlist (${items.length}) — HRK Jewellery`
     return () => { document.title = 'HRK Jewellery' }
   }, [items.length])
 
-  const moveToCart = (item) => {
-    dispatch({ type: 'ADD_ITEM', item: { ...item, id: item._id, qty: 1 } })
-    removeFromWishlist(item._id)
-    setToast({ message: `${item.name} added to cart`, type: 'success' })
+  // The wishlist only keeps a snapshot of the product, so fetch the latest
+  // stock, price and sizes before adding — otherwise the bag would allow more
+  // than is actually in stock.
+  const moveToCart = async (item) => {
+    setMovingId(item._id)
+    try {
+      const res = await fetch(`${API}/products/${item._id}`)
+      if (!res.ok) throw new Error('This product is no longer available')
+      const product = await res.json()
+      if (product.isVisible === false) throw new Error('This product is no longer available')
+      if (!product.stock || product.stock <= 0) throw new Error(`${product.name} is out of stock`)
+
+      const inBag = cartItems.filter(i => i.id === product._id).reduce((n, i) => n + i.qty, 0)
+      if (inBag >= product.stock) {
+        throw new Error(`Only ${product.stock} in stock — already in your bag`)
+      }
+
+      dispatch({
+        type: 'ADD_ITEM',
+        item: {
+          ...product,
+          id:            product._id,
+          stock:         product.stock,
+          selectedSize:  product.sizes?.[0]  || '',
+          selectedColor: product.colors?.[0] || '',
+          qty: 1,
+        },
+      })
+      removeFromWishlist(item._id)
+      setToast({ message: `${product.name} added to cart`, type: 'success' })
+    } catch (err) {
+      setToast({ message: err.message || 'Could not add to cart', type: 'error' })
+    } finally {
+      setMovingId(null)
+    }
   }
 
   if (items.length === 0) {
@@ -86,9 +120,9 @@ export default function Wishlist() {
               <p className="text-sm font-bold text-gray-900 mb-3">₹{item.price?.toLocaleString('en-IN')}</p>
 
               <div className="flex gap-2">
-                <button onClick={() => moveToCart(item)}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-amber-500 text-white py-2 rounded-xl text-xs font-medium transition-colors">
-                  <ShoppingBag size={13} /> Add to Cart
+                <button onClick={() => moveToCart(item)} disabled={movingId === item._id}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-amber-500 disabled:opacity-60 text-white py-2 rounded-xl text-xs font-medium transition-colors">
+                  <ShoppingBag size={13} /> {movingId === item._id ? 'Adding…' : 'Add to Cart'}
                 </button>
                 <button onClick={() => removeFromWishlist(item._id)}
                   className="border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-300 px-2.5 rounded-xl transition-colors"

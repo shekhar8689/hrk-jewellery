@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { getImageUrl } from '../utils/image'
+import { getImageUrl, getVideoUrl, getVideoPoster } from '../utils/image'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -18,12 +18,15 @@ export default function Hero() {
       .finally(() => setLoading(false))
   }, [])
 
-  // Auto-advance only when there are multiple banners
+  // Auto-advance only when there are multiple banners.
+  // Photo slides stay 5.5 s; video slides move on when the video ends
+  // (with a 60 s safety limit in case the video never reports "ended").
   useEffect(() => {
     if (banners.length <= 1) return
-    const t = setInterval(() => setCurrent(c => (c + 1) % banners.length), 5500)
-    return () => clearInterval(t)
-  }, [banners.length])
+    const isVideo = banners[current]?.mediaType === 'video' && banners[current]?.video
+    const t = setTimeout(() => setCurrent(c => (c + 1) % banners.length), isVideo ? 60000 : 5500)
+    return () => clearTimeout(t)
+  }, [banners, current])
 
   const prev = () => setCurrent(c => (c - 1 + banners.length) % banners.length)
   const next = () => setCurrent(c => (c + 1) % banners.length)
@@ -76,14 +79,45 @@ export default function Hero() {
           key={s._id}
           className={`absolute inset-0 transition-opacity duration-1000 ${i === current ? 'opacity-100' : 'opacity-0'}`}
         >
-          <img
-            src={getImageUrl(s.image, 1920)}
-            alt={s.title}
-            className="w-full h-full object-cover"
-            loading={i === 0 ? 'eager' : 'lazy'}
-            fetchpriority={i === 0 ? 'high' : 'low'}
-            decoding="async"
-          />
+          {s.mediaType === 'video' && s.video ? (
+            // Only the visible slide loads/plays its video; the others show
+            // their cover image so the page doesn't download every video.
+            i === current ? (
+              <video
+                key={s.video}
+                src={getVideoUrl(s.video)}
+                poster={s.image ? getImageUrl(s.image, 1920) : getVideoPoster(s.video, 1920) || undefined}
+                className="w-full h-full object-cover"
+                autoPlay
+                muted
+                playsInline
+                loop={banners.length <= 1}
+                preload="auto"
+                onEnded={next}
+                onError={() => banners.length > 1 && setTimeout(next, 3000)}
+                aria-label={s.title}
+              />
+            ) : (s.image || getVideoPoster(s.video)) ? (
+              <img
+                src={s.image ? getImageUrl(s.image, 1920) : getVideoPoster(s.video, 1920)}
+                alt={s.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-900" />
+            )
+          ) : (
+            <img
+              src={getImageUrl(s.image, 1920)}
+              alt={s.title}
+              className="w-full h-full object-cover"
+              loading={i === 0 ? 'eager' : 'lazy'}
+              fetchpriority={i === 0 ? 'high' : 'low'}
+              decoding="async"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/10 md:bg-gradient-to-r md:from-black/60 md:via-black/30 md:to-black/20" />
         </div>
       ))}

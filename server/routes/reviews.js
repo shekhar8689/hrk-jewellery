@@ -20,6 +20,7 @@ function reviewRateLimit(req, res, next) {
   next()
 }
 
+router.get('/featured',       ctrl.getFeatured)        // must stay above /:productId
 router.get('/:productId',     ctrl.getProductReviews)
 router.get('/:productId/can', protect, ctrl.canReview)
 router.post('/',              protect, reviewRateLimit, ctrl.create)

@@ -12,6 +12,7 @@ const productSchema = new mongoose.Schema({
   },
   material: { type: String, default: '' },
   images: [{ type: String }],
+  video: { type: String, default: '' },   // optional product video (Cloudinary URL or uploads/ path)
   sizes: [{ type: String }],
   colors: [{ type: String }],
   isVisible: { type: Boolean, default: true },

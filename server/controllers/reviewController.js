@@ -32,6 +32,39 @@ exports.getProductReviews = async (req, res) => {
   }
 }
 
+// ── GET /api/reviews/featured  (public) ───────────────────────────────────────
+// Newest approved 4–5 star reviews for the home page. Only reviews the admin
+// has approved are shown; names are shortened to "First L." for privacy.
+exports.getFeatured = async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 6, 1), 12)
+    const reviews = await Review.find({ status: 'approved', rating: { $gte: 4 } })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate('product', 'name isVisible')
+      .lean()
+
+    const shortName = (full = '') => {
+      const parts = String(full).trim().split(/\s+/).filter(Boolean)
+      if (!parts.length) return 'Customer'
+      return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.` : parts[0]
+    }
+
+    res.json(reviews.map(r => ({
+      _id:       r._id,
+      rating:    r.rating,
+      title:     r.title,
+      text:      r.text,
+      name:      shortName(r.userName),
+      verified:  !!r.order,
+      createdAt: r.createdAt,
+      product:   r.product && r.product.isVisible !== false ? { _id: r.product._id, name: r.product.name } : null,
+    })))
+  } catch {
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+
 // ── GET /api/reviews/:productId/can  (auth) ───────────────────────────────────
 // Any logged-in user can review; verified purchase badge if they have a delivered order
 exports.canReview = async (req, res) => {
