@@ -183,6 +183,20 @@ function OrderCard({ order, onCancel, cancelling }) {
               </span>
             </span>
           </div>
+
+          {/* Courier details, once the shop adds them */}
+          {(order.courier || order.trackingNumber) && order.status !== 'cancelled' && (
+            <div className="text-sm bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+              <span className="text-gray-500">Shipped with </span>
+              <span className="font-medium text-gray-900">{order.courier || 'courier'}</span>
+              {order.trackingNumber && <> · <span className="font-mono">{order.trackingNumber}</span></>}
+              {order.trackingUrl && (
+                <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer" className="block text-amber-700 hover:underline mt-0.5">
+                  Track on the courier's website →
+                </a>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

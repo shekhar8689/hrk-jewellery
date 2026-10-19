@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../context/AdminAuthContext'
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Image,
-  Star, Tag, LogOut, Menu, X, LayoutGrid,
+  Star, Tag, LogOut, Menu, X, LayoutGrid, Megaphone,
 } from 'lucide-react'
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { to: '/admin/users',     icon: Users,            label: 'Users' },
   { to: '/admin/banners',   icon: Image,            label: 'Banners' },
   { to: '/admin/categories', icon: LayoutGrid,     label: 'Categories' },
+  { to: '/admin/offer',     icon: Megaphone,        label: 'Offer Banner' },
   { to: '/admin/reviews',   icon: Star,             label: 'Reviews' },
   { to: '/admin/coupons',   icon: Tag,              label: 'Coupons' },
 ]

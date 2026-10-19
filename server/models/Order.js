@@ -40,6 +40,12 @@ const orderSchema = new mongoose.Schema({
   paymentMethod: { type: String, enum: ['cod', 'online'], default: 'cod' },
   paymentStatus: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
   notes: { type: String, default: '' },
+  // Tracking — filled in by the admin when the parcel is shipped
+  courier:        { type: String, trim: true, maxlength: 60,  default: '' },
+  trackingNumber: { type: String, trim: true, maxlength: 80,  default: '' },
+  trackingUrl:    { type: String, trim: true, maxlength: 300, default: '' },
+  // When each status was reached (shown on the customer's tracking page)
+  statusHistory: [{ status: String, at: { type: Date, default: Date.now }, _id: false }],
 }, { timestamps: true })
 
 module.exports = mongoose.model('Order', orderSchema)

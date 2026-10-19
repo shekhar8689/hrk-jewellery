@@ -29,16 +29,27 @@ function OrderDetail({ order, onClose, onStatusChange }) {
   const [status,  setStatus]  = useState(order.status)
   const [saving,  setSaving]  = useState(false)
   const [error,   setError]   = useState('')
+  // Courier details shown to the customer on the Track Order page
+  const [tracking, setTracking] = useState({
+    courier:        order.courier || '',
+    trackingNumber: order.trackingNumber || '',
+    trackingUrl:    order.trackingUrl || '',
+  })
+  const trackingChanged = ['courier', 'trackingNumber', 'trackingUrl']
+    .some(k => (tracking[k] || '').trim() !== (order[k] || ''))
+  const showTracking = ['confirmed', 'shipped', 'delivered'].includes(order.status) || status === 'shipped'
 
   const validNext   = NEXT_STATUSES[order.status] || []
-  const canSave     = validNext.length > 0 && status !== order.status
+  const canSave     = (validNext.length > 0 && status !== order.status) || trackingChanged
 
   const save = async () => {
     if (!canSave) return
+    if (tracking.trackingUrl.trim() && !/^https?:\/\//i.test(tracking.trackingUrl.trim()))
+      return setError('Tracking link must start with https://')
     setSaving(true)
     setError('')
     try {
-      await onStatusChange(order._id, status)
+      await onStatusChange(order._id, status, tracking)
       onClose()
     } catch (err) {
       setError(err.message || 'Failed to update status. Please try again.')
@@ -162,6 +173,26 @@ function OrderDetail({ order, onClose, onStatusChange }) {
             )}
           </div>
 
+          {/* Courier details */}
+          {showTracking && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Courier details <span className="text-gray-400 font-normal">(shown on the customer's Track Order page)</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <input value={tracking.courier} maxLength={60} placeholder="Courier, e.g. Delhivery"
+                  onChange={e => setTracking(t => ({ ...t, courier: e.target.value }))}
+                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                <input value={tracking.trackingNumber} maxLength={80} placeholder="Tracking number"
+                  onChange={e => setTracking(t => ({ ...t, trackingNumber: e.target.value }))}
+                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+              <input value={tracking.trackingUrl} maxLength={300} type="url" placeholder="Tracking link (optional), https://…"
+                onChange={e => setTracking(t => ({ ...t, trackingUrl: e.target.value }))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3">
             <button
@@ -171,13 +202,13 @@ function OrderDetail({ order, onClose, onStatusChange }) {
             >
               {validNext.length === 0 ? 'Close' : 'Cancel'}
             </button>
-            {validNext.length > 0 && (
+            {(validNext.length > 0 || showTracking) && (
               <button
                 onClick={save}
                 disabled={saving || !canSave}
                 className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors"
               >
-                {saving ? 'Saving…' : 'Update Status'}
+                {saving ? 'Saving…' : status !== order.status ? 'Update Status' : 'Save Details'}
               </button>
             )}
           </div>
@@ -224,13 +255,13 @@ export default function Orders() {
   useEffect(() => { load() }, [load])
 
   // Optimistic update: change status in local list immediately, no full reload needed
-  const handleStatusChange = async (id, newStatus) => {
-    await api.updateOrderStatus(id, newStatus)   // throws on error → caught in modal
+  const handleStatusChange = async (id, newStatus, tracking) => {
+    const updated = await api.updateOrderStatus(id, newStatus, tracking)   // throws on error → caught in modal
     setData(prev => ({
       ...prev,
-      orders: prev.orders.map(o => o._id === id ? { ...o, status: newStatus } : o),
+      orders: prev.orders.map(o => o._id === id ? { ...o, ...updated } : o),
     }))
-    setToast({ message: `Order status updated to "${newStatus}"`, type: 'success' })
+    setToast({ message: `Order ${updated.status === newStatus ? `status updated to "${newStatus}"` : 'details saved'}`, type: 'success' })
   }
 
   return (

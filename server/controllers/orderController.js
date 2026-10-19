@@ -6,6 +6,17 @@ const mongoose = require('mongoose')
 
 const PAGE_SIZE = 15
 
+// Courier fields from the admin form. Only sets the ones that were sent.
+function cleanTracking(body) {
+  const values = {}
+  for (const [k, max] of [['courier', 60], ['trackingNumber', 80], ['trackingUrl', 300]]) {
+    if (body[k] !== undefined) values[k] = String(body[k]).trim().slice(0, max)
+  }
+  if (values.trackingUrl && !/^https?:\/\//i.test(values.trackingUrl))
+    return { error: 'Tracking link must start with https://' }
+  return { values }
+}
+
 // A cancelled order gives its coupon use back
 async function releaseCoupon(order) {
   if (!order.couponCode) return
@@ -226,6 +237,7 @@ exports.create = async (req, res) => {
       totalAmount:   total,
       paymentMethod: 'cod',
       paymentStatus: 'pending',   // set to paid by the admin when cash is collected
+      statusHistory: [{ status: 'pending', at: new Date() }],
       notes: notes ? String(notes).slice(0, 500) : '',
     }
 
@@ -254,11 +266,20 @@ exports.create = async (req, res) => {
 exports.updateStatus = async (req, res) => {
   try {
     const { status } = req.body
-    if (!Object.keys(STATUS_TRANSITIONS).includes(status))
-      return res.status(400).json({ message: 'Invalid status value' })
-
     const order = await Order.findById(req.params.id)
     if (!order) return res.status(404).json({ message: 'Order not found' })
+
+    // Courier / tracking details can be saved with or without a status change
+    const tracking = cleanTracking(req.body)
+    if (tracking.error) return res.status(400).json({ message: tracking.error })
+    Object.assign(order, tracking.values)
+
+    if (!status || status === order.status) {
+      await order.save()
+      return res.json(order)
+    }
+    if (!Object.keys(STATUS_TRANSITIONS).includes(status))
+      return res.status(400).json({ message: 'Invalid status value' })
 
     const allowed = STATUS_TRANSITIONS[order.status] || []
     if (!allowed.includes(status)) {
@@ -278,6 +299,7 @@ exports.updateStatus = async (req, res) => {
     }
 
     order.status = status
+    order.statusHistory.push({ status, at: new Date() })
     await order.save()
     res.json(order)
   } catch {
@@ -317,8 +339,60 @@ exports.cancelOrder = async (req, res) => {
     await releaseCoupon(order)
 
     order.status = 'cancelled'
+    order.statusHistory.push({ status: 'cancelled', at: new Date() })
     await order.save()
     res.json(order)
+  } catch {
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+
+// ── POST /api/orders/track  (public) ──────────────────────────────────────────
+// Customers look up an order with its Order ID (the 8 characters shown after
+// ordering, e.g. "94E7178C", or the full ID) plus the phone number used.
+exports.track = async (req, res) => {
+  try {
+    const rawId = String(req.body.orderId || '').trim().replace(/^#/, '').toLowerCase()
+    const phone = String(req.body.phone || '').replace(/\D/g, '').slice(-10)
+    if (!/^[0-9a-f]{8}$|^[0-9a-f]{24}$/.test(rawId))
+      return res.status(400).json({ message: 'Enter the 8-character Order ID, e.g. 94E7178C' })
+    if (!PHONE_RE.test(phone))
+      return res.status(400).json({ message: 'Enter the 10-digit mobile number used for the order' })
+
+    const NOT_FOUND = { message: 'No order found with that Order ID and phone number' }
+    let order
+    if (rawId.length === 24) {
+      order = await Order.findOne({ _id: rawId, 'shippingAddress.phone': phone }).lean()
+    } else {
+      const candidates = await Order.find({ 'shippingAddress.phone': phone }).sort({ createdAt: -1 }).limit(200).lean()
+      order = candidates.find(o => String(o._id).endsWith(rawId))
+    }
+    if (!order) return res.status(404).json(NOT_FOUND)
+
+    // Only what the customer needs — no full street address or email
+    res.json({
+      orderId:        String(order._id).slice(-8).toUpperCase(),
+      status:         order.status,
+      placedAt:       order.createdAt,
+      statusHistory:  (order.statusHistory || []).length ? order.statusHistory : [{ status: 'pending', at: order.createdAt }],
+      items:          order.items.map(i => ({ name: i.name, image: i.image, price: i.price, quantity: i.quantity, size: i.size, color: i.color })),
+      subtotal:       order.subtotal,
+      shippingFee:    order.shippingFee,
+      discount:       order.discount,
+      couponCode:     order.couponCode,
+      totalAmount:    order.totalAmount,
+      paymentMethod:  order.paymentMethod,
+      paymentStatus:  order.paymentStatus,
+      courier:        order.courier || '',
+      trackingNumber: order.trackingNumber || '',
+      trackingUrl:    order.trackingUrl || '',
+      deliverTo: {
+        name:    order.shippingAddress?.name,
+        city:    order.shippingAddress?.city,
+        state:   order.shippingAddress?.state,
+        pincode: order.shippingAddress?.pincode,
+      },
+    })
   } catch {
     res.status(500).json({ message: 'Server error' })
   }

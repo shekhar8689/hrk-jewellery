@@ -12,6 +12,7 @@ const links = {
     { label: 'Anklets',     to: '/collections/anklets' },
   ],
   'Help': [
+    { label: 'Track Order',       to: '/track-order' },
     { label: 'My Orders',         to: '/my-orders' },
     { label: 'Returns & Exchange', to: '/return-policy' },
     { label: 'Shipping Info',     to: '/shipping-policy' },

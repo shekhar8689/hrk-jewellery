@@ -33,6 +33,9 @@ export default function OrderSuccess() {
           Order ID:&nbsp;
           <span className="font-mono font-semibold text-gray-700">#{orderId}</span>
         </p>
+        <p className="text-xs text-gray-400 mt-1">
+          Save this Order ID — with your mobile number it lets you track the order anytime.
+        </p>
 
         {/* Payment badge */}
         <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
@@ -128,6 +131,13 @@ export default function OrderSuccess() {
 
       {/* ── Actions ───────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3">
+        <Link
+          to={`/track-order?id=${orderId}`}
+          className="flex-1 border border-gold-500 text-gold-600 hover:bg-gold-500 hover:text-white transition-colors py-4 text-sm font-semibold text-center inline-flex items-center justify-center gap-2"
+        >
+          <Truck size={16} />
+          Track Order
+        </Link>
         <Link
           to="/collections"
           className="flex-1 btn-gold py-4 text-sm font-semibold text-center inline-flex items-center justify-center gap-2"
