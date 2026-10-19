@@ -52,6 +52,11 @@ export const api = {
   deleteBanner: (id) => req('DELETE', `/banners/${id}`),
   toggleBanner: (id) => req('PATCH', `/banners/${id}/toggle`),
 
+  // Categories (home page "Shop by Category")
+  getCategories: () => req('GET', '/categories/admin'),
+  updateCategory: (slug, form) => req('PUT', `/categories/${slug}`, form, true),
+  toggleCategory: (slug) => req('PATCH', `/categories/${slug}/toggle`),
+
   // Reviews (admin)
   getReviews: (params = {}) => req('GET', '/admin/reviews?' + new URLSearchParams(params)),
   updateReview: (id, data) => req('PUT', `/admin/reviews/${id}`, data),

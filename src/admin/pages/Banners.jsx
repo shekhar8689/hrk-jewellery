@@ -1,15 +1,15 @@
 import { useEffect, useState, useRef } from 'react'
-import { Plus, Trash2, Eye, EyeOff, X, Upload, Edit2, Link as LinkIcon } from 'lucide-react'
+import { Plus, Trash2, Eye, EyeOff, X, Upload, Edit2, Link as LinkIcon, Image as ImageIcon, Film } from 'lucide-react'
 import AdminLayout from '../components/AdminLayout'
 import { api } from '../api'
-import { getImageUrl } from '../../utils/image'
+import { getImageUrl, getVideoUrl, getVideoPoster } from '../../utils/image'
 
 // ─── Banner Form Modal ────────────────────────────────────────────────────────
 function BannerModal({ banner, onClose, onSave }) {
   const [form, setForm] = useState(
     banner
-      ? { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: 0, ...banner }
-      : { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: 0 }
+      ? { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: 0, mediaType: 'image', ...banner }
+      : { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: 0, mediaType: 'image' }
   )
   const [file, setFile]       = useState(null)
   const [preview, setPreview] = useState(banner?.image ? getImageUrl(banner.image) : '')
@@ -17,6 +17,29 @@ function BannerModal({ banner, onClose, onSave }) {
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState('')
   const fileRef               = useRef()
+
+  // Video slide
+  const isVideo = form.mediaType === 'video'
+  const [videoFile, setVideoFile]       = useState(null)
+  const [videoPreview, setVideoPreview] = useState(banner?.video ? getVideoUrl(banner.video) : '')
+  const [useVideoUrl, setUseVideoUrl]   = useState(false)
+  const [removeCover, setRemoveCover]   = useState(false)
+  const videoRef = useRef()
+
+  const onVideoFile = e => {
+    const f = e.target.files[0]
+    if (!f) return
+    if (f.size > 50 * 1024 * 1024) { setError('Video must be 50 MB or smaller.'); return }
+    setError('')
+    setVideoFile(f)
+    setVideoPreview(URL.createObjectURL(f))
+    set('videoUrl', '')
+  }
+  const onVideoUrlChange = e => {
+    set('videoUrl', e.target.value)
+    setVideoPreview(e.target.value)
+    setVideoFile(null)
+  }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -39,16 +62,23 @@ function BannerModal({ banner, onClose, onSave }) {
 
   const submit = async e => {
     e.preventDefault()
-    const hasImage = file || form.imageUrl || banner?.image
-    if (!hasImage) return setError('Please upload an image or paste an image URL.')
+    const hasImage = file || form.imageUrl || (banner?.image && !removeCover)
+    const hasVideo = videoFile || form.videoUrl || banner?.video
+    if (!isVideo && !hasImage) return setError('Please upload an image or paste an image URL.')
+    if (isVideo && !hasVideo) return setError('Please upload a video or paste a video URL.')
 
     setSaving(true)
     setError('')
     try {
       const fd = new FormData()
-      // Append all form fields
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ''))
+      // Append the editable form fields (stored image/video paths are handled by the server)
+      Object.entries(form).forEach(([k, v]) => {
+        if (['image', 'video', '_id', '__v', 'createdAt', 'updatedAt'].includes(k)) return
+        fd.append(k, v ?? '')
+      })
       if (file) fd.append('image', file)
+      if (isVideo && videoFile) fd.append('video', videoFile)
+      if (isVideo && removeCover && !file && !form.imageUrl) fd.append('removeImage', 'true')
       await onSave(fd)
       onClose()
     } catch (err) {
@@ -72,10 +102,79 @@ function BannerModal({ banner, onClose, onSave }) {
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-lg">{error}</div>
           )}
 
-          {/* Image input — file upload or URL */}
+          {/* Photo or video */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Slide type</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[['image', 'Photo', ImageIcon], ['video', 'Video', Film]].map(([value, label, Icon]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => set('mediaType', value)}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                    form.mediaType === value ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon size={15} /> {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Video input — only for video slides */}
+          {isVideo && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">Banner Video *</label>
+                <button
+                  type="button"
+                  onClick={() => setUseVideoUrl(v => !v)}
+                  className="text-xs text-amber-600 hover:text-amber-700 flex items-center gap-1"
+                >
+                  <LinkIcon size={12} />
+                  {useVideoUrl ? 'Upload file instead' : 'Paste URL instead'}
+                </button>
+              </div>
+              {useVideoUrl ? (
+                <input
+                  type="url"
+                  value={form.videoUrl || ''}
+                  onChange={onVideoUrlChange}
+                  placeholder="https://res.cloudinary.com/.../video.mp4"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              ) : (
+                <div
+                  onClick={() => videoRef.current.click()}
+                  className="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden cursor-pointer hover:border-amber-400 transition-colors"
+                >
+                  {videoPreview ? (
+                    <video src={videoPreview} className="w-full h-40 object-cover bg-black" muted autoPlay loop playsInline />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-40 gap-2">
+                      <Film size={24} className="text-gray-400" />
+                      <p className="text-sm text-gray-500">Click to upload banner video</p>
+                      <p className="text-xs text-gray-400">MP4, WebM or MOV · max 50 MB · plays muted on loop</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              <input ref={videoRef} type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={onVideoFile} />
+              {!useVideoUrl && !videoFile && banner?.video && (
+                <p className="text-xs text-gray-400 mt-1">Current video kept unless you upload a new one.</p>
+              )}
+              <p className="text-xs text-gray-500 mt-2">
+                Tip: keep videos short (5–15 seconds) and landscape. Shorter videos load faster on phones.
+              </p>
+            </div>
+          )}
+
+          {/* Image input — file upload or URL (cover image for video slides) */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-700">Banner Image *</label>
+              <label className="text-sm font-medium text-gray-700">
+                {isVideo ? 'Cover Image (optional)' : 'Banner Image *'}
+              </label>
               <button
                 type="button"
                 onClick={() => setUseUrl(v => !v)}
@@ -85,6 +184,9 @@ function BannerModal({ banner, onClose, onSave }) {
                 {useUrl ? 'Upload file instead' : 'Paste URL instead'}
               </button>
             </div>
+            {isVideo && (
+              <p className="text-xs text-gray-500 mb-2">Shown while the video loads. If left empty, the first frame of the video is used.</p>
+            )}
 
             {useUrl ? (
               // URL input
@@ -101,22 +203,29 @@ function BannerModal({ banner, onClose, onSave }) {
                 onClick={() => fileRef.current.click()}
                 className="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden cursor-pointer hover:border-amber-400 transition-colors"
               >
-                {preview ? (
+                {preview && !removeCover ? (
                   <img src={preview} alt="Preview" className="w-full h-40 object-cover" />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-40 gap-2">
                     <Upload size={24} className="text-gray-400" />
-                    <p className="text-sm text-gray-500">Click to upload banner image</p>
+                    <p className="text-sm text-gray-500">Click to upload {isVideo ? 'cover' : 'banner'} image</p>
                     <p className="text-xs text-gray-400">JPG, PNG or WebP · max 5 MB</p>
                   </div>
                 )}
               </div>
             )}
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { setRemoveCover(false); onFile(e) }} />
 
             {/* Show current image if editing */}
-            {!useUrl && !file && banner?.image && (
-              <p className="text-xs text-gray-400 mt-1">Current image kept unless you upload a new one.</p>
+            {!useUrl && !file && banner?.image && !removeCover && (
+              <p className="text-xs text-gray-400 mt-1">
+                Current image kept unless you upload a new one.
+                {isVideo && (
+                  <button type="button" onClick={() => setRemoveCover(true)} className="ml-2 text-red-500 hover:underline">
+                    Remove cover
+                  </button>
+                )}
+              </p>
             )}
           </div>
 
@@ -306,8 +415,17 @@ export default function Banners() {
                 }`}
               >
                 {/* Thumbnail */}
-                <div className="sm:w-48 h-32 sm:h-auto shrink-0 bg-gray-100">
-                  {banner.image ? (
+                <div className="sm:w-48 h-32 sm:h-auto shrink-0 bg-gray-100 relative">
+                  {banner.mediaType === 'video' && (
+                    <span className="absolute top-2 left-2 z-10 flex items-center gap-1 text-[10px] font-semibold bg-black/70 text-white px-2 py-0.5 rounded-full">
+                      <Film size={11} /> VIDEO
+                    </span>
+                  )}
+                  {banner.mediaType === 'video' && banner.video && !banner.image ? (
+                    getVideoPoster(banner.video, 600)
+                      ? <img src={getVideoPoster(banner.video, 600)} alt={banner.title} loading="lazy" className="w-full h-full object-cover" />
+                      : <video src={getVideoUrl(banner.video)} muted playsInline preload="metadata" className="w-full h-full object-cover bg-black" />
+                  ) : banner.image ? (
                     <img
                       src={getImageUrl(banner.image, 600)}
                       loading="lazy" decoding="async"

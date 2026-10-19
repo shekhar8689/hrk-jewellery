@@ -1,4 +1,5 @@
 const Product = require('../models/Product')
+const { fileToUrl } = require('../config/cloudinary')
 const { validationResult } = require('express-validator')
 
 const DEFAULT_PAGE_SIZE = 12
@@ -61,10 +62,7 @@ exports.create = async (req, res) => {
     if (!req.body.description || String(req.body.description).trim().length < 10)
       return res.status(400).json({ message: 'Description must be at least 10 characters' })
 
-    const uploadedImages = req.files?.map(f =>
-      // Cloudinary gives a full https URL in f.path; local disk gives a filename
-      (/^https?:\/\//.test(f.path || '') ? f.path : `uploads/${f.filename}`)
-    ) || []
+    const uploadedImages = (req.files?.images || []).map(fileToUrl)
     const urlImages = req.body.imageUrls
       ? req.body.imageUrls.split('\n').map(s => s.trim()).filter(Boolean)
       : []
@@ -76,7 +74,12 @@ exports.create = async (req, res) => {
     if (data.isNew !== undefined)        data.isNew        = data.isNew        === 'true' || data.isNew        === true
     if (data.isBestseller !== undefined) data.isBestseller = data.isBestseller === 'true' || data.isBestseller === true
 
+    const videoFile = req.files?.video?.[0]
+    data.video = videoFile ? fileToUrl(videoFile) : String(req.body.videoUrl || '').trim()
+
     delete data.imageUrls
+    delete data.videoUrl
+    delete data.removeVideo
     const product = await Product.create(data)
     res.status(201).json(product)
   } catch (err) {
@@ -91,10 +94,7 @@ exports.update = async (req, res) => {
 
     const updates = { ...req.body }
 
-    const uploadedImages = req.files?.map(f =>
-      // Cloudinary gives a full https URL in f.path; local disk gives a filename
-      (/^https?:\/\//.test(f.path || '') ? f.path : `uploads/${f.filename}`)
-    ) || []
+    const uploadedImages = (req.files?.images || []).map(fileToUrl)
     const urlImages = updates.imageUrls
       ? updates.imageUrls.split('\n').map(s => s.trim()).filter(Boolean)
       : []
@@ -106,7 +106,17 @@ exports.update = async (req, res) => {
     if (updates.isNew !== undefined) updates.isNew = updates.isNew === 'true' || updates.isNew === true
     if (updates.isBestseller !== undefined) updates.isBestseller = updates.isBestseller === 'true' || updates.isBestseller === true
 
+    // Video: a new upload or pasted link replaces it; "removeVideo" clears it
+    const videoFile = req.files?.video?.[0]
+    const videoUrl  = String(updates.videoUrl || '').trim()
+    if (videoFile)                          updates.video = fileToUrl(videoFile)
+    else if (videoUrl)                      updates.video = videoUrl
+    else if (updates.removeVideo === 'true') updates.video = ''
+    else                                     delete updates.video
+
     delete updates.imageUrls
+    delete updates.videoUrl
+    delete updates.removeVideo
     Object.assign(product, updates)
     await product.save()
     res.json(product)

@@ -1,8 +1,16 @@
 const Banner = require('../models/Banner')
+const { fileToUrl } = require('../config/cloudinary')
 
-// Cloudinary gives a full https URL in file.path; local disk gives a filename
-const fileToImage = (file) =>
-  /^https?:\/\//.test(file.path || '') ? file.path : `uploads/${file.filename}`
+// Pick the uploaded file for a field, or the pasted URL, or nothing
+const pick = (req, field, urlField) => {
+  const file = req.files?.[field]?.[0]
+  if (file) return fileToUrl(file)
+  const url = (req.body[urlField] || '').trim()
+  return url || undefined
+}
+
+// Fields that must never be copied straight from the form
+const strip = ({ imageUrl, videoUrl, removeImage, _id, __v, createdAt, updatedAt, ...rest }) => rest
 
 exports.getAll = async (_req, res) => {
   try {
@@ -24,12 +32,16 @@ exports.getActive = async (_req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    // Accept uploaded file (normalize path) or a pasted URL
-    const image = req.file ? fileToImage(req.file) : (req.body.imageUrl || '')
-    if (!image) return res.status(400).json({ message: 'Image required (upload a file or paste a URL)' })
+    const mediaType = req.body.mediaType === 'video' ? 'video' : 'image'
+    const image = pick(req, 'image', 'imageUrl') || ''
+    const video = mediaType === 'video' ? (pick(req, 'video', 'videoUrl') || '') : ''
 
-    const { imageUrl, ...rest } = req.body
-    const banner = await Banner.create({ ...rest, image })
+    if (mediaType === 'image' && !image)
+      return res.status(400).json({ message: 'Image required (upload a file or paste a URL)' })
+    if (mediaType === 'video' && !video)
+      return res.status(400).json({ message: 'Video required (upload a video or paste a video URL)' })
+
+    const banner = await Banner.create({ ...strip(req.body), mediaType, image, video })
     res.status(201).json(banner)
   } catch (err) {
     res.status(400).json({ message: err.message })
@@ -38,18 +50,30 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { imageUrl, ...rest } = req.body
-    const updates = { ...rest }
-    if (req.file) {
-      updates.image = fileToImage(req.file)
-    } else if (imageUrl) {
-      updates.image = imageUrl
-    }
-    const banner = await Banner.findByIdAndUpdate(req.params.id, updates, { new: true })
+    const banner = await Banner.findById(req.params.id)
     if (!banner) return res.status(404).json({ message: 'Banner not found' })
+
+    const updates   = strip(req.body)
+    const mediaType = req.body.mediaType === 'video' ? 'video' : req.body.mediaType === 'image' ? 'image' : banner.mediaType
+    delete updates.image
+    delete updates.video
+
+    const newImage = pick(req, 'image', 'imageUrl')
+    const newVideo = pick(req, 'video', 'videoUrl')
+    if (newImage) banner.image = newImage
+    else if (req.body.removeImage === 'true' && mediaType === 'video') banner.image = ''
+    if (newVideo) banner.video = newVideo
+
+    Object.assign(banner, updates, { mediaType })
+    if (mediaType === 'image' && !banner.image)
+      return res.status(400).json({ message: 'Image required (upload a file or paste a URL)' })
+    if (mediaType === 'video' && !banner.video)
+      return res.status(400).json({ message: 'Video required (upload a video or paste a video URL)' })
+
+    await banner.save()
     res.json(banner)
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    res.status(400).json({ message: err.message })
   }
 }
 

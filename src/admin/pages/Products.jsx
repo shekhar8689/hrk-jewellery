@@ -1,16 +1,16 @@
 import { useEffect, useState, useRef } from 'react'
-import { Plus, Search, Edit2, Trash2, Eye, EyeOff, X, Upload, Link as LinkIcon } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Eye, EyeOff, X, Upload, Link as LinkIcon, Film } from 'lucide-react'
 import AdminLayout from '../components/AdminLayout'
 import Pagination from '../components/Pagination'
 import { api } from '../api'
-import { getImageUrl } from '../../utils/image'
+import { getImageUrl, getVideoUrl } from '../../utils/image'
 
 const CATEGORIES = ['rings', 'necklaces', 'earrings', 'bracelets', 'anklets']
 
 const EMPTY = {
   name: '', price: '', originalPrice: '', description: '',
   category: 'rings', material: '', sizes: '', colors: '',
-  stock: '', isNew: false, isBestseller: false, imageUrls: '',
+  stock: '', isNew: false, isBestseller: false, imageUrls: '', videoUrl: '',
 }
 
 // ─── Product Form Modal ───────────────────────────────────────────────────────
@@ -22,6 +22,7 @@ function ProductModal({ product, onClose, onSave }) {
           sizes: product.sizes?.join(', ') || '',
           colors: product.colors?.join(', ') || '',
           imageUrls: '',   // URL field always starts empty on edit
+          videoUrl: '',
         }
       : EMPTY
   )
@@ -35,7 +36,25 @@ function ProductModal({ product, onClose, onSave }) {
   const [error, setError]       = useState('')
   const fileRef                 = useRef()
 
+  // Optional product video
+  const [videoFile, setVideoFile]       = useState(null)
+  const [videoPreview, setVideoPreview] = useState(product?.video ? getVideoUrl(product.video) : '')
+  const [useVideoUrl, setUseVideoUrl]   = useState(false)
+  const [removeVideo, setRemoveVideo]   = useState(false)
+  const videoRef                        = useRef()
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const onVideoFile = e => {
+    const f = e.target.files[0]
+    if (!f) return
+    if (f.size > 50 * 1024 * 1024) { setError('Video must be 50 MB or smaller.'); return }
+    setError('')
+    setVideoFile(f)
+    setVideoPreview(URL.createObjectURL(f))
+    setRemoveVideo(false)
+    set('videoUrl', '')
+  }
 
   // When files are picked, generate local preview URLs
   const onFiles = e => {
@@ -60,8 +79,14 @@ function ProductModal({ product, onClose, onSave }) {
     setError('')
     try {
       const fd = new FormData()
-      Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)))
+      // Send only the editable fields — stored images/video and database
+      // fields are handled by the server (sending the images list as text
+      // used to merge several images into one broken link on edit).
+      const SKIP = ['images', 'video', '_id', '__v', 'createdAt', 'updatedAt', 'rating', 'reviews', 'isVisible']
+      Object.entries(form).forEach(([k, v]) => { if (!SKIP.includes(k)) fd.append(k, String(v ?? '')) })
       files.forEach(f => fd.append('images', f))
+      if (videoFile) fd.append('video', videoFile)
+      else if (removeVideo) fd.append('removeVideo', 'true')
       await onSave(fd)
       onClose()
     } catch (err) {
@@ -230,6 +255,61 @@ function ProductModal({ product, onClose, onSave }) {
                 <p className="text-xs text-gray-400 mt-2">
                   Existing images will be kept unless you upload new ones or paste new URLs.
                 </p>
+              )}
+            </div>
+
+            {/* Product video (optional) */}
+            <div className="col-span-2">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Product Video <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => { setUseVideoUrl(v => !v); setVideoFile(null); set('videoUrl', '') }}
+                  className="text-xs text-amber-600 hover:text-amber-700 flex items-center gap-1"
+                >
+                  <LinkIcon size={12} />
+                  {useVideoUrl ? 'Upload file instead' : 'Paste video URL instead'}
+                </button>
+              </div>
+
+              {useVideoUrl ? (
+                <input
+                  type="url"
+                  value={form.videoUrl}
+                  onChange={e => { set('videoUrl', e.target.value); setVideoPreview(e.target.value); setRemoveVideo(false) }}
+                  placeholder="https://res.cloudinary.com/.../product.mp4"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              ) : (
+                <div
+                  onClick={() => videoRef.current.click()}
+                  className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-amber-400 transition-colors"
+                >
+                  <Film size={24} className="mx-auto text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500">Click to upload a video</p>
+                  <p className="text-xs text-gray-400 mt-1">MP4, WebM or MOV · max 50 MB · shown in the product's photo gallery</p>
+                </div>
+              )}
+              <input ref={videoRef} type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={onVideoFile} />
+
+              {videoPreview && !removeVideo && (
+                <div className="mt-3 flex items-start gap-3">
+                  <video src={videoPreview} className="w-32 h-24 object-cover rounded-lg border border-gray-200 bg-black" muted playsInline controls />
+                  {(product?.video || videoFile || form.videoUrl) && (
+                    <button
+                      type="button"
+                      onClick={() => { setRemoveVideo(true); setVideoFile(null); setVideoPreview(''); set('videoUrl', '') }}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      Remove video
+                    </button>
+                  )}
+                </div>
+              )}
+              {product?.video && removeVideo && (
+                <p className="text-xs text-red-500 mt-2">The video will be removed when you save.</p>
               )}
             </div>
 

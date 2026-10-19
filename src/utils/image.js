@@ -42,3 +42,32 @@ export function getImageUrl(path, width) {
 
   return SERVER + withSlash
 }
+
+const CLOUDINARY_VIDEO = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(.*)$/
+
+/**
+ * getVideoUrl(path) — full URL for a stored video.
+ * Cloudinary videos get f_auto,q_auto so each browser receives a smaller,
+ * compatible format. Local "uploads/..." paths point at the API server.
+ */
+export function getVideoUrl(path) {
+  if (!path) return ''
+  if (/^https?:\/\//.test(path)) {
+    const m = path.match(CLOUDINARY_VIDEO)
+    if (m && !/^(f_|q_|vc_)/.test(m[2])) return `${m[1]}f_auto,q_auto/${m[2]}`
+    return path
+  }
+  const clean = path.replace(/\\/g, '/')
+  return SERVER + (clean.startsWith('/') ? clean : '/' + clean)
+}
+
+/**
+ * getVideoPoster(path, width?) — a still frame of a Cloudinary video to show
+ * while it loads. Returns '' for non-Cloudinary videos.
+ */
+export function getVideoPoster(path, width = 1280) {
+  const m = (path || '').match(CLOUDINARY_VIDEO)
+  if (!m) return ''
+  const rest = m[2].replace(/^(f_|q_|vc_)[^/]*\//, '').replace(/\.[a-z0-9]+$/i, '.jpg')
+  return `${m[1]}so_0,f_auto,q_auto,c_limit,w_${width}/${rest}`
+}

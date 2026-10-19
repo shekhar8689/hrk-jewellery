@@ -1,11 +1,15 @@
 import { X, Minus, Plus, ShoppingBag, AlertTriangle } from 'lucide-react'
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { getImageUrl } from '../utils/image'
 
 export default function Cart({ open, onClose }) {
-  const { items, totalItems, totalPrice, dispatch } = useCart()
+  const { items, totalItems, totalPrice, dispatch, refreshStock } = useCart()
   const navigate = useNavigate()
+
+  // Check live stock every time the bag opens
+  useEffect(() => { if (open) refreshStock() }, [open, refreshStock])
 
   const goCheckout = () => {
     onClose()

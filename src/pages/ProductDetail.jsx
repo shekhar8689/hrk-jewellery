@@ -4,13 +4,14 @@ import {
   Star, Heart, ShoppingBag, Shield, RefreshCw, Truck,
   ChevronDown, ChevronUp, AlertTriangle, Send, Trash2, User,
   CheckCircle, Share2,
+  Play,
 } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import Toast from '../components/Toast'
 import { useCart } from '../context/CartContext'
 import { useUserAuth } from '../context/UserAuthContext'
 import { useWishlist } from '../context/WishlistContext'
-import { getImageUrl } from '../utils/image'
+import { getImageUrl, getVideoUrl, getVideoPoster } from '../utils/image'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -475,6 +476,12 @@ export default function ProductDetail({ onCartOpen }) {
   ]
 
   const images = product.images || []
+  // Gallery = photos, then the product video (if any) as the last item
+  const media = [
+    ...images.map(src => ({ type: 'image', src })),
+    ...(product.video ? [{ type: 'video', src: product.video }] : []),
+  ]
+  const shown = media[imgIdx] || media[0]
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-24 md:py-10">
@@ -490,20 +497,42 @@ export default function ProductDetail({ onCartOpen }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 lg:gap-16">
         {/* Image gallery — thumbnails below on phones, beside on larger screens */}
         <div className="flex flex-col-reverse md:flex-row gap-3 -mx-4 sm:mx-0">
-          {images.length > 1 && (
+          {media.length > 1 && (
             <div className="flex md:flex-col gap-2 px-4 sm:px-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {images.map((img, i) => (
+              {media.map((m, i) => (
                 <button key={i} onClick={() => setImgIdx(i)}
-                  aria-label={`Show photo ${i + 1}`}
-                  className={`shrink-0 w-16 h-20 overflow-hidden border-2 transition-colors ${i === imgIdx ? 'border-gold-500' : 'border-transparent hover:border-gray-200'}`}>
-                  <img src={getImageUrl(img, 160)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                  aria-label={m.type === 'video' ? 'Play product video' : `Show photo ${i + 1}`}
+                  className={`relative shrink-0 w-16 h-20 overflow-hidden border-2 transition-colors bg-gray-900 ${i === imgIdx ? 'border-gold-500' : 'border-transparent hover:border-gray-200'}`}>
+                  {m.type === 'video' ? (
+                    <>
+                      {(getVideoPoster(m.src, 160) || images[0]) && (
+                        <img src={getVideoPoster(m.src, 160) || getImageUrl(images[0], 160)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover opacity-80" />
+                      )}
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center shadow">
+                          <Play size={13} className="text-gray-900 ml-0.5" fill="currentColor" />
+                        </span>
+                      </span>
+                    </>
+                  ) : (
+                    <img src={getImageUrl(m.src, 160)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                  )}
                 </button>
               ))}
             </div>
           )}
           <div className="flex-1 aspect-[3/4] overflow-hidden bg-gray-50 relative group">
-            {images[imgIdx] ? (
-              <img src={getImageUrl(images[imgIdx], 1200)} alt={product.name} fetchpriority="high"
+            {shown?.type === 'video' ? (
+              <video
+                key={shown.src}
+                src={getVideoUrl(shown.src)}
+                poster={getVideoPoster(shown.src, 1200) || (images[0] ? getImageUrl(images[0], 1200) : undefined)}
+                className={`w-full h-full object-cover bg-black ${outOfStock ? 'opacity-50' : ''}`}
+                autoPlay muted loop playsInline controls
+                aria-label={`${product.name} video`}
+              />
+            ) : shown ? (
+              <img src={getImageUrl(shown.src, 1200)} alt={product.name} fetchpriority="high"
                 className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${outOfStock ? 'opacity-50' : ''}`} />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">No image</div>

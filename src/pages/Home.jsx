@@ -16,13 +16,6 @@ const PROMISES = [
   { icon: Award,     title: '4.8★ Rated',          desc: 'Loved by 2 lakh+ customers' },
 ]
 
-// Static testimonials — no DB needed
-const REVIEWS = [
-  { name: 'Priya S.',   rating: 5, text: "Absolutely love the quality! My ring hasn't tarnished even after months of daily wear." },
-  { name: 'Ananya M.', rating: 5, text: 'The layered necklace is stunning! Got so many compliments. Shipping was super fast.' },
-  { name: 'Shreya K.', rating: 5, text: 'Finally found affordable jewellery that actually lasts. Perfect for everyday wear.' },
-]
-
 // Skeleton placeholder while products load
 function ProductSkeleton() {
   return (
@@ -42,6 +35,7 @@ export default function Home() {
   const [bestsellers, setBestsellers] = useState([])
   const [newArrivals, setNewArrivals]  = useState([])
   const [loading, setLoading]          = useState(true)
+  const [reviews, setReviews]          = useState([])   // real, admin-approved reviews
 
   useEffect(() => {
     // Fetch bestsellers and new arrivals in parallel
@@ -55,6 +49,12 @@ export default function Home() {
       })
       .catch(err => console.error('Home fetch error:', err))
       .finally(() => setLoading(false))
+
+    // Customer reviews approved in Admin → Reviews (4–5 stars, newest first)
+    fetch(`${API}/reviews/featured?limit=6`)
+      .then(r => (r.ok ? r.json() : []))
+      .then(data => setReviews(Array.isArray(data) ? data : []))
+      .catch(() => setReviews([]))
   }, [])
 
   return (
@@ -155,30 +155,43 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-14 md:py-20 bg-[#0E0E0E] px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8 md:mb-12">
-            <p className="text-[10px] text-gold-500 tracking-[0.3em] uppercase mb-3">Reviews</p>
-            <h2 className="font-serif text-[2rem] leading-tight sm:text-4xl md:text-5xl text-white font-light tracking-wide">
-              What Our Customers Say
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-            {REVIEWS.map(review => (
-              <div key={review.name} className="border border-white/10 bg-white/5 p-5 md:p-7">
-                <div className="flex gap-0.5 mb-4">
-                  {Array(review.rating).fill(0).map((_, i) => (
-                    <Star key={i} size={13} className="fill-gold-400 text-gold-400" />
-                  ))}
+      {/* Testimonials — real customer reviews; hidden until at least one is approved */}
+      {reviews.length > 0 && (
+        <section className="py-14 md:py-20 bg-[#0E0E0E] px-4 sm:px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-8 md:mb-12">
+              <p className="text-[10px] text-gold-500 tracking-[0.3em] uppercase mb-3">Reviews</p>
+              <h2 className="font-serif text-[2rem] leading-tight sm:text-4xl md:text-5xl text-white font-light tracking-wide">
+                What Our Customers Say
+              </h2>
+            </div>
+            <div className={`grid grid-cols-1 gap-4 md:gap-6 ${reviews.length === 1 ? 'max-w-xl mx-auto' : reviews.length === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : 'md:grid-cols-3'}`}>
+              {reviews.map(review => (
+                <div key={review._id} className="border border-white/10 bg-white/5 p-5 md:p-7 flex flex-col">
+                  <div className="flex gap-0.5 mb-4" aria-label={`${review.rating} out of 5 stars`}>
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <Star key={n} size={13} className={n <= review.rating ? 'fill-gold-400 text-gold-400' : 'text-white/20'} />
+                    ))}
+                  </div>
+                  {review.title && <p className="text-sm text-white font-medium mb-2">{review.title}</p>}
+                  <p className="text-sm text-gray-400 leading-relaxed mb-5 font-light italic flex-1">"{review.text}"</p>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-[11px] font-semibold text-white tracking-widest uppercase">
+                      — {review.name}
+                      {review.verified && <span className="ml-2 normal-case tracking-normal font-normal text-gold-400">· Verified buyer</span>}
+                    </p>
+                    {review.product && (
+                      <Link to={`/product/${review.product._id}`} className="text-[11px] text-gray-500 hover:text-gold-400 transition-colors truncate max-w-[60%]">
+                        {review.product.name}
+                      </Link>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm text-gray-400 leading-relaxed mb-5 font-light italic">"{review.text}"</p>
-                <p className="text-[11px] font-semibold text-white tracking-widest uppercase">— {review.name}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </main>
   )
 }

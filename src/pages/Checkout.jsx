@@ -48,7 +48,7 @@ const inputClass      = 'w-full border border-gray-200 rounded-xl px-4 py-3 text
 const inputErrorClass = 'w-full border border-red-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 bg-white transition-shadow'
 
 export default function Checkout() {
-  const { items, totalPrice, dispatch } = useCart()
+  const { items, totalPrice, dispatch, refreshStock } = useCart()
   const { user, getToken }              = useUserAuth()
   const navigate = useNavigate()
 
@@ -88,6 +88,8 @@ export default function Checkout() {
     if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus({ preventScroll: true }) }
   }, [fieldErrors])
 
+  // Make sure quantities still fit the live stock before ordering
+  useEffect(() => { refreshStock?.() }, [refreshStock])
   useEffect(() => { document.title = 'Checkout — HRK Jewellery'; return () => { document.title = 'HRK Jewellery' } }, [])
 
   const shipping   = totalPrice >= 999 ? 0 : 99

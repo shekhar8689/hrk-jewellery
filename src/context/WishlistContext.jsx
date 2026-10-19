@@ -32,6 +32,7 @@ export function WishlistProvider({ children }) {
             rating: product.rating,
             reviews:product.reviews,
             category: product.category,
+            stock:  product.stock,
           }]
     )
   }
