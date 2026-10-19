@@ -36,7 +36,7 @@ export default function Wishlist() {
   const moveToCart = async (item) => {
     setMovingId(item._id)
     try {
-      const res = await fetch(`${API}/products/${item._id}`)
+      const res = await fetch(`${API}/products/${item._id}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('This product is no longer available')
       const product = await res.json()
       if (product.isVisible === false) throw new Error('This product is no longer available')

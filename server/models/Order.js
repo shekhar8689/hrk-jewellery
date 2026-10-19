@@ -26,6 +26,11 @@ const orderSchema = new mongoose.Schema({
     state: { type: String, required: true },
     pincode: { type: String, required: true },
   },
+  // Price breakdown — always calculated by the server from the database
+  subtotal:       { type: Number, default: 0 },
+  shippingFee:    { type: Number, default: 0 },
+  couponCode:     { type: String, default: '' },
+  discount:       { type: Number, default: 0 },
   totalAmount: { type: Number, required: true },
   status: {
     type: String,

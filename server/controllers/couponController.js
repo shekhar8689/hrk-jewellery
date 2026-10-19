@@ -1,4 +1,5 @@
 const Coupon = require('../models/Coupon')
+const { couponDiscount } = require('../utils/pricing')
 
 // ── POST /api/coupons/validate  (public — validate & return discount) ─────────
 exports.validate = async (req, res) => {
@@ -7,32 +8,12 @@ exports.validate = async (req, res) => {
     if (!code) return res.status(400).json({ message: 'Coupon code is required' })
 
     const coupon = await Coupon.findOne({ code: String(code).toUpperCase().trim() })
-    if (!coupon || !coupon.isActive)
-      return res.status(404).json({ message: 'Invalid or expired coupon code' })
-
-    if (coupon.expiresAt && new Date() > coupon.expiresAt)
-      return res.status(400).json({ message: 'This coupon has expired' })
-
-    if (coupon.maxUses > 0 && coupon.usedCount >= coupon.maxUses)
-      return res.status(400).json({ message: 'This coupon has reached its usage limit' })
-
-    const amount = Number(orderAmount) || 0
-    if (amount < coupon.minOrderAmount)
-      return res.status(400).json({
-        message: `Minimum order amount of ₹${coupon.minOrderAmount.toLocaleString('en-IN')} required for this coupon`,
-      })
-
-    let discount = coupon.type === 'percentage'
-      ? (amount * coupon.value) / 100
-      : coupon.value
-
-    if (coupon.maxDiscount > 0) discount = Math.min(discount, coupon.maxDiscount)
-    discount = Math.min(discount, amount) // can't exceed order total
-    discount = Math.round(discount * 100) / 100
+    const result = couponDiscount(coupon, Number(orderAmount) || 0)
+    if (result.error) return res.status(coupon && coupon.isActive ? 400 : 404).json({ message: result.error })
 
     res.json({
       valid:       true,
-      discount,
+      discount:    result.discount,
       couponId:    coupon._id,
       code:        coupon.code,
       type:        coupon.type,

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Star, Shield, RefreshCw, Truck, Award } from 'lucide-react'
+import { Star, Shield, RefreshCw, Truck, Banknote } from 'lucide-react'
 import Hero from '../components/Hero'
 import Categories from '../components/Categories'
 import ProductCard from '../components/ProductCard'
+import useOfferCoupon from '../hooks/useOfferCoupon'
 
 // API base URL from environment variable
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
@@ -13,7 +14,7 @@ const PROMISES = [
   { icon: Shield,    title: 'Fine Craftsmanship', desc: '18K gold-plated, tarnish-free' },
   { icon: Truck,     title: 'Free Shipping',       desc: 'On orders above ₹999' },
   { icon: RefreshCw, title: '30-Day Returns',      desc: 'Hassle-free exchange policy' },
-  { icon: Award,     title: '4.8★ Rated',          desc: 'Loved by 2 lakh+ customers' },
+  { icon: Banknote,  title: 'Cash on Delivery',    desc: 'Pay when your order arrives' },
 ]
 
 // Skeleton placeholder while products load
@@ -36,6 +37,7 @@ export default function Home() {
   const [newArrivals, setNewArrivals]  = useState([])
   const [loading, setLoading]          = useState(true)
   const [reviews, setReviews]          = useState([])   // real, admin-approved reviews
+  const offer = useOfferCoupon()                         // live FIRST10 coupon, or null
 
   useEffect(() => {
     // Fetch bestsellers and new arrivals in parallel
@@ -106,7 +108,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Mid-page promo banner (static) */}
+      {/* Mid-page promo banner — shown only while the offer coupon is active,
+          and the discount text comes from the coupon itself */}
+      {offer && (
       <section className="relative h-64 md:h-[420px] overflow-hidden bg-gray-900">
         <img
           src="https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=1600&q=80"
@@ -117,15 +121,16 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/10 md:to-transparent" />
         <div className="absolute inset-0 flex flex-col items-start justify-center px-6 sm:px-12 md:px-24">
           <p className="text-gold-400 tracking-[0.3em] text-[10px] uppercase mb-3 md:mb-4">Limited Time Offer</p>
-          <h2 className="font-serif text-4xl md:text-6xl text-white font-light mb-3 leading-tight">
-            Flat 20% Off
+          <h2 className="font-serif text-4xl md:text-6xl text-white font-light mb-3 leading-tight capitalize">
+            {offer.label}
           </h2>
           <p className="text-white/70 text-sm mb-6 md:mb-8 tracking-wide">
-            First order · Code <span className="text-gold-400 font-semibold">FIRST10</span>
+            {offer.description ? <>{offer.description} · </> : null}Use code <span className="text-gold-400 font-semibold">{offer.code}</span> at checkout
           </p>
           <Link to="/collections" className="btn-gold">Shop Now</Link>
         </div>
       </section>
+      )}
 
       {/* New Arrivals section */}
       <section className="py-10 md:py-16 px-4 sm:px-6 max-w-7xl mx-auto">
