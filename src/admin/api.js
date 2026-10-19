@@ -38,7 +38,7 @@ export const api = {
   // Orders
   getOrders: (params = {}) => req('GET', '/orders?' + new URLSearchParams(params)),
   getOrder: (id) => req('GET', `/orders/${id}`),
-  updateOrderStatus: (id, status) => req('PATCH', `/orders/${id}/status`, { status }),
+  updateOrderStatus: (id, status, tracking = {}) => req('PATCH', `/orders/${id}/status`, { status, ...tracking }),
 
   // Users
   getUsers: (params = {}) => req('GET', '/users?' + new URLSearchParams(params)),
@@ -51,6 +51,10 @@ export const api = {
   updateBanner: (id, form) => req('PUT', `/banners/${id}`, form, true),
   deleteBanner: (id) => req('DELETE', `/banners/${id}`),
   toggleBanner: (id) => req('PATCH', `/banners/${id}/toggle`),
+
+  // Offer banner (home page promotion + top bar code)
+  getOffer: () => req('GET', '/offer/admin'),
+  updateOffer: (form) => req('PUT', '/offer', form, true),
 
   // Categories (home page "Shop by Category")
   getCategories: () => req('GET', '/categories/admin'),

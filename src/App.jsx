@@ -16,6 +16,7 @@ const Collections = lazy(() => import('./pages/Collections'))
 const ProductDetail = lazy(() => import('./pages/ProductDetail'))
 const Checkout = lazy(() => import('./pages/Checkout'))
 const OrderSuccess = lazy(() => import('./pages/OrderSuccess'))
+const TrackOrder = lazy(() => import('./pages/TrackOrder'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
 const MyOrders = lazy(() => import('./pages/MyOrders'))
@@ -40,6 +41,7 @@ const Orders = lazy(() => import('./admin/pages/Orders'))
 const AdminUsers = lazy(() => import('./admin/pages/AdminUsers'))
 const Banners = lazy(() => import('./admin/pages/Banners'))
 const AdminCategories = lazy(() => import('./admin/pages/Categories'))
+const AdminOffer = lazy(() => import('./admin/pages/OfferBanner'))
 const AdminReviews = lazy(() => import('./admin/pages/Reviews'))
 const AdminCoupons = lazy(() => import('./admin/pages/Coupons'))
 import ProtectedRoute from './admin/components/ProtectedRoute'
@@ -71,6 +73,7 @@ function PublicSite() {
             <Route path="/product/:id"           element={<ProductDetail onCartOpen={() => setCartOpen(true)} />} />
             <Route path="/checkout"              element={<Checkout />} />
             <Route path="/order-success"         element={<OrderSuccess />} />
+            <Route path="/track-order"           element={<TrackOrder />} />
             <Route path="/login"                 element={<Login />} />
             <Route path="/register"              element={<Register />} />
             <Route path="/my-orders"             element={<MyOrders />} />
@@ -121,6 +124,7 @@ export default function App() {
             <Route path="/admin/users"     element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/banners"   element={<ProtectedRoute><Banners /></ProtectedRoute>} />
             <Route path="/admin/categories" element={<ProtectedRoute><AdminCategories /></ProtectedRoute>} />
+            <Route path="/admin/offer"     element={<ProtectedRoute><AdminOffer /></ProtectedRoute>} />
             <Route path="/admin/reviews"   element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
             <Route path="/admin/coupons"   element={<ProtectedRoute><AdminCoupons /></ProtectedRoute>} />
 

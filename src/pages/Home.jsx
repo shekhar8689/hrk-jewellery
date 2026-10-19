@@ -4,7 +4,8 @@ import { Star, Shield, RefreshCw, Truck, Banknote } from 'lucide-react'
 import Hero from '../components/Hero'
 import Categories from '../components/Categories'
 import ProductCard from '../components/ProductCard'
-import useOfferCoupon from '../hooks/useOfferCoupon'
+import useOffer, { offerBannerVisible } from '../hooks/useOffer'
+import { getImageUrl } from '../utils/image'
 
 // API base URL from environment variable
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
@@ -37,7 +38,7 @@ export default function Home() {
   const [newArrivals, setNewArrivals]  = useState([])
   const [loading, setLoading]          = useState(true)
   const [reviews, setReviews]          = useState([])   // real, admin-approved reviews
-  const offer = useOfferCoupon()                         // live FIRST10 coupon, or null
+  const offer = useOffer()                               // Admin → Offer Banner
 
   useEffect(() => {
     // Fetch bestsellers and new arrivals in parallel
@@ -108,28 +109,44 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Mid-page promo banner — shown only while the offer coupon is active,
-          and the discount text comes from the coupon itself */}
-      {offer && (
-      <section className="relative h-64 md:h-[420px] overflow-hidden bg-gray-900">
-        <img
-          src="https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=1600&q=80"
-          alt="Gold jewellery on display"
-          loading="lazy" decoding="async"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/10 md:to-transparent" />
-        <div className="absolute inset-0 flex flex-col items-start justify-center px-6 sm:px-12 md:px-24">
-          <p className="text-gold-400 tracking-[0.3em] text-[10px] uppercase mb-3 md:mb-4">Limited Time Offer</p>
-          <h2 className="font-serif text-4xl md:text-6xl text-white font-light mb-3 leading-tight capitalize">
-            {offer.label}
-          </h2>
-          <p className="text-white/70 text-sm mb-6 md:mb-8 tracking-wide">
-            {offer.description ? <>{offer.description} · </> : null}Use code <span className="text-gold-400 font-semibold">{offer.code}</span> at checkout
-          </p>
-          <Link to="/collections" className="btn-gold">Shop Now</Link>
-        </div>
-      </section>
+      {/* Offer banner — managed in Admin → Offer Banner. Hidden when switched
+          off, or when its coupon code doesn't work (so we never advertise it). */}
+      {offerBannerVisible(offer) && (
+        <section className="relative h-64 md:h-[420px] overflow-hidden bg-gradient-to-br from-[#1c1510] via-[#3b2a1a] to-[#8a6236]">
+          {offer.image && (
+            <img
+              src={getImageUrl(offer.image, 1600)}
+              alt=""
+              loading="lazy" decoding="async"
+              onError={e => { e.currentTarget.style.display = 'none' }}
+              className="w-full h-full object-cover"
+            />
+          )}
+          <div className={`absolute inset-0 ${offer.align === 'center'
+            ? 'bg-black/55'
+            : 'bg-gradient-to-r from-black/80 via-black/55 to-black/10 md:to-transparent'}`} />
+          <div className={`absolute inset-0 flex flex-col justify-center px-6 sm:px-12 md:px-24 ${
+            offer.align === 'center' ? 'items-center text-center' : 'items-start'}`}>
+            {offer.badge && (
+              <p className="text-gold-400 tracking-[0.3em] text-[10px] uppercase mb-3 md:mb-4">{offer.badge}</p>
+            )}
+            <h2 className={`font-serif text-4xl md:text-6xl text-white font-light mb-3 leading-tight ${offer.title ? '' : 'capitalize'}`}>
+              {offer.title || offer.coupon?.label}
+            </h2>
+            {(offer.subtitle || offer.coupon) && (
+              <p className="text-white/70 text-sm mb-6 md:mb-8 tracking-wide max-w-md">
+                {offer.subtitle}
+                {offer.subtitle && offer.coupon ? ' · ' : ''}
+                {offer.coupon && <>Use code <span className="text-gold-400 font-semibold">{offer.coupon.code}</span> at checkout</>}
+              </p>
+            )}
+            {offer.buttonText && (
+              /^https:\/\//.test(offer.link || '')
+                ? <a href={offer.link} className="btn-gold" target="_blank" rel="noopener noreferrer">{offer.buttonText}</a>
+                : <Link to={offer.link || '/collections'} className="btn-gold">{offer.buttonText}</Link>
+            )}
+          </div>
+        </section>
       )}
 
       {/* New Arrivals section */}

@@ -18,6 +18,10 @@ connectDB().then(seedAdmin)
 
 const app = express()
 
+// Render runs the app behind one proxy: trust it so req.ip is the visitor's
+// address (needed for the per-visitor limits on reviews and order tracking)
+app.set('trust proxy', 1)
+
 /* ── CORS: allow the frontend origin ── */
 // FRONTEND_URL may hold several comma-separated origins; trailing slashes are ignored
 const normalizeOrigin = (o) => o.trim().replace(/\/+$/, '')
@@ -77,6 +81,7 @@ app.use('/api/orders',    require('./routes/orders'))
 app.use('/api/users',     require('./routes/users'))
 app.use('/api/banners',   publicCache, require('./routes/banners'))
 app.use('/api/categories', publicCache, require('./routes/categories'))
+app.use('/api/offer',      publicCache, require('./routes/offer'))
 app.use('/api/dashboard', require('./routes/dashboard'))
 app.use('/api/reviews',        require('./routes/reviews'))
 app.use('/api/admin/reviews',  require('./routes/adminReviews'))
