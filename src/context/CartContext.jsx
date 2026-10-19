@@ -150,7 +150,8 @@ export function CartProvider({ children }) {
     const ids = [...new Set(itemsRef.current.map(i => i.id).filter(Boolean))]
     await Promise.all(ids.map(async id => {
       try {
-        const res = await fetch(`${API}/products/${id}`)
+        // no-store: always the live price/stock, never the browser's cached copy
+        const res = await fetch(`${API}/products/${id}`, { cache: 'no-store' })
         if (!res.ok) return
         const p = await res.json()
         dispatch({ type: 'SYNC_PRODUCT', product: { id, stock: p.stock ?? 0, price: p.price } })

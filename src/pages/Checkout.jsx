@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingBag, Truck, CreditCard, CheckCircle, X, ChevronRight, AlertTriangle, Tag, Loader2 } from 'lucide-react'
+import { ShoppingBag, Truck, CheckCircle, X, ChevronRight, AlertTriangle, Tag, Loader2 } from 'lucide-react'
 import { useCart }     from '../context/CartContext'
 import { useUserAuth } from '../context/UserAuthContext'
 import { getImageUrl } from '../utils/image'
@@ -66,8 +66,8 @@ export default function Checkout() {
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); if (fieldErrors[k]) setFieldErrors(fe => ({ ...fe, [k]: '' })) }
 
-  const [paymentMethod, setPaymentMethod] = useState('cod')
-  const [screen,    setScreen]   = useState('form')
+  // Cash on Delivery only, until a real payment gateway (e.g. Razorpay) is connected
+  const paymentMethod = 'cod'
   const [submitting,setSubmitting]= useState(false)
   const [error,     setError]    = useState('')
 
@@ -95,6 +95,27 @@ export default function Checkout() {
   const shipping   = totalPrice >= 999 ? 0 : 99
   const discount   = appliedCoupon?.discount || 0
   const grandTotal = Math.max(0, totalPrice + shipping - discount)
+
+  // If the bag total changes (e.g. live prices were refreshed), re-check the
+  // applied coupon so the discount shown matches what the server will give.
+  const couponCode = appliedCoupon?.code
+  useEffect(() => {
+    if (!couponCode) return
+    let cancelled = false
+    fetch(`${API}/coupons/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: couponCode, orderAmount: totalPrice + shipping }),
+    })
+      .then(async r => ({ ok: r.ok, data: await r.json() }))
+      .then(({ ok, data }) => {
+        if (cancelled) return
+        if (ok) setAppliedCoupon(data)
+        else { setAppliedCoupon(null); setCouponError(data.message || 'Coupon removed') }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [couponCode, totalPrice, shipping])
 
   if (items.length === 0) {
     return (
@@ -133,7 +154,7 @@ export default function Checkout() {
   const removeCoupon = () => { setAppliedCoupon(null); setCouponError('') }
 
   // ── Order placement ────────────────────────────────────────────────────────
-  const buildPayload = (paymentStatus) => ({
+  const buildPayload = () => ({
     guestInfo: !user ? { name: form.name, email: form.email, phone: form.phone } : undefined,
     shippingAddress: {
       name: form.name.trim(), phone: form.phone.trim(),
@@ -149,11 +170,11 @@ export default function Checkout() {
       size:     item.selectedSize  || '',
       color:    item.selectedColor || '',
     })),
+    // The server recalculates prices, shipping and the coupon discount itself;
+    // the total is sent only so it can warn if prices changed meanwhile.
     totalAmount:   grandTotal,
     couponCode:    appliedCoupon?.code,
-    couponDiscount: discount,
     paymentMethod,
-    paymentStatus,
   })
 
   const authHeaders = () => {
@@ -161,14 +182,18 @@ export default function Checkout() {
     return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
   }
 
-  const placeOrder = async (paymentStatus) => {
-    const res  = await fetch(`${API}/orders`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(buildPayload(paymentStatus)) })
+  const placeOrder = async () => {
+    const res  = await fetch(`${API}/orders`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(buildPayload()) })
     const data = await res.json()
     if (!res.ok) {
       if (data.productId && data.available !== undefined) {
         const idx = items.findIndex(i => (i.id || i._id) === String(data.productId))
         if (idx !== -1) dispatch({ type: 'MARK_OUT_OF_STOCK', index: idx })
       }
+      // Prices changed since the bag was filled: load the current ones
+      if (data.priceChanged) refreshStock?.()
+      // Coupon no longer valid (expired / used up): take it off
+      if (data.couponError) setAppliedCoupon(null)
       throw new Error(data.message || 'Could not place order')
     }
     return data
@@ -186,100 +211,11 @@ export default function Checkout() {
 
     setSubmitting(true)
     try {
-      if (paymentMethod === 'cod') {
-        const order = await placeOrder('pending')
-        dispatch({ type: 'CLEAR' })
-        navigate('/order-success', { state: { order, paid: false } })
-      } else {
-        setScreen('mock-pay')
-      }
+      const order = await placeOrder()
+      dispatch({ type: 'CLEAR' })
+      navigate('/order-success', { state: { order, paid: false } })
     } catch (err) { setError(err.message) }
     finally { setSubmitting(false) }
-  }
-
-  const simulatePayment = async (success) => {
-    setSubmitting(true); setError('')
-    try {
-      if (success) {
-        const order = await placeOrder('paid')
-        dispatch({ type: 'CLEAR' })
-        navigate('/order-success', { state: { order, paid: true } })
-      } else {
-        setScreen('pay-failed')
-      }
-    } catch (err) { setError(err.message); setScreen('form') }
-    finally { setSubmitting(false) }
-  }
-
-  /* ── Mock Payment Screen ──────────────────────────────────────────────────── */
-  if (screen === 'mock-pay') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm text-center">
-          <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-5">
-            <CreditCard size={26} className="text-amber-500" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Confirm Payment</h2>
-          <p className="text-gray-500 text-sm mb-2">Order total</p>
-          <p className="text-4xl font-bold text-gray-900 mb-2">₹{grandTotal.toLocaleString('en-IN')}</p>
-          {discount > 0 && (
-            <p className="text-sm text-green-600 mb-4 font-medium">
-              Coupon <strong>{appliedCoupon.code}</strong> saved ₹{discount.toLocaleString('en-IN')}
-            </p>
-          )}
-          <div className="bg-gray-50 rounded-xl p-4 text-left text-sm mb-6">
-            <p className="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-2">Delivering to</p>
-            <p className="font-medium text-gray-900">{form.name}</p>
-            <p className="text-gray-500">{form.city}, {form.state} — {form.pincode}</p>
-          </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left text-sm text-amber-800 mb-6">
-            <p className="font-semibold mb-1">Demo Mode</p>
-            <p className="text-xs">Simulated gateway — choose an outcome below.</p>
-          </div>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-xl mb-4 flex items-start gap-2">
-              <AlertTriangle size={15} className="shrink-0 mt-0.5" /> {error}
-            </div>
-          )}
-          <div className="flex gap-3">
-            <button onClick={() => simulatePayment(false)} disabled={submitting}
-              className="flex-1 border border-gray-300 text-gray-600 py-3 rounded-xl text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors">
-              Fail Payment
-            </button>
-            <button onClick={() => simulatePayment(true)} disabled={submitting}
-              className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-xl text-sm font-bold disabled:opacity-50 transition-colors">
-              {submitting ? 'Processing…' : 'Pay Now ✓'}
-            </button>
-          </div>
-          <button onClick={() => setScreen('form')} className="mt-4 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-            ← Back to checkout
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  /* ── Payment Failed Screen ────────────────────────────────────────────────── */
-  if (screen === 'pay-failed') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm text-center">
-          <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-5">
-            <X size={26} className="text-red-500" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Payment Failed</h2>
-          <p className="text-gray-500 text-sm mb-8">No order was placed and no money was deducted.</p>
-          <button onClick={() => setScreen('mock-pay')}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 rounded-xl text-sm transition-colors mb-3">
-            Try Again
-          </button>
-          <button onClick={() => setScreen('form')}
-            className="w-full border border-gray-200 text-gray-600 py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors">
-            Change Payment Method
-          </button>
-        </div>
-      </div>
-    )
   }
 
   /* ── Main Form ─────────────────────────────────────────────────────────────── */
@@ -376,13 +312,12 @@ export default function Checkout() {
               <div className="space-y-3">
                 {[
                   { value: 'cod',    icon: Truck,      title: 'Cash on Delivery',         desc: 'Pay when your order arrives. No advance payment needed.' },
-                  { value: 'online', icon: CreditCard, title: 'Online Payment (Demo)',     desc: 'UPI, Cards, Net Banking — simulated for demo.' },
                 ].map(({ value, icon: Icon, title, desc }) => (
                   <label key={value}
                     className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                       paymentMethod === value ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-gray-300'}`}>
                     <input type="radio" name="payment" value={value}
-                      checked={paymentMethod === value} onChange={() => setPaymentMethod(value)}
+                      checked={paymentMethod === value} readOnly
                       className="accent-amber-500 w-4 h-4" />
                     <Icon size={22} className={paymentMethod === value ? 'text-amber-500' : 'text-gray-400'} />
                     <div>
@@ -489,9 +424,7 @@ export default function Checkout() {
 
               <button type="submit" disabled={submitting}
                 className="w-full mt-6 py-4 text-sm font-bold tracking-wide uppercase transition-colors disabled:opacity-60 btn-gold">
-                {submitting ? 'Please wait…' : paymentMethod === 'cod'
-                  ? `Place Order · ₹${grandTotal.toLocaleString('en-IN')}`
-                  : `Continue to Pay · ₹${grandTotal.toLocaleString('en-IN')}`}
+                {submitting ? 'Please wait…' : `Place Order · ₹${grandTotal.toLocaleString('en-IN')}`}
               </button>
               <p className="text-center text-xs text-gray-400 mt-3 flex items-center justify-center gap-1">
                 🔒 Safe &amp; secure checkout

@@ -106,6 +106,18 @@ function OrderDetail({ order, onClose, onStatusChange }) {
                 </div>
               ))}
             </div>
+            {/* Price breakdown (orders placed after the server-side price check) */}
+            {order.subtotal > 0 && (
+              <div className="border-t border-gray-100 mt-3 pt-3 space-y-1 text-sm text-gray-600">
+                <div className="flex justify-between"><span>Subtotal</span><span>₹{order.subtotal.toLocaleString('en-IN')}</span></div>
+                <div className="flex justify-between"><span>Shipping</span><span>{order.shippingFee ? `₹${order.shippingFee.toLocaleString('en-IN')}` : 'Free'}</span></div>
+                {order.discount > 0 && (
+                  <div className="flex justify-between text-green-700">
+                    <span>Coupon {order.couponCode}</span><span>−₹{order.discount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="border-t border-gray-100 mt-3 pt-3 flex justify-between">
               <span className="font-semibold text-gray-900">Total</span>
               <span className="font-bold text-gray-900">₹{order.totalAmount?.toLocaleString('en-IN')}</span>

@@ -4,6 +4,7 @@ import { ShoppingBag, Search, Menu, X, Heart, User, LogOut, Package } from 'luci
 import { useCart }     from '../context/CartContext'
 import { useUserAuth } from '../context/UserAuthContext'
 import { useWishlist } from '../context/WishlistContext'
+import useOfferCoupon from '../hooks/useOfferCoupon'
 
 const navLinks = [
   { label: 'New Arrivals', to: '/collections?filter=new' },
@@ -15,6 +16,7 @@ const navLinks = [
 ]
 
 export default function Header({ onCartOpen }) {
+  const offer = useOfferCoupon()
   const { totalItems }             = useCart()
   const { user, logout }           = useUserAuth()
   const { items: wishlistItems }   = useWishlist()
@@ -55,8 +57,14 @@ export default function Header({ onCartOpen }) {
     <>
       {/* Announcement bar */}
       <div className="bg-gray-900 text-gray-300 text-center py-2 md:py-2.5 px-3 text-[10px] tracking-[0.12em] md:tracking-[0.2em] uppercase whitespace-nowrap overflow-hidden text-ellipsis">
-        Free shipping <span className="hidden sm:inline">on orders </span>above ₹999&nbsp;&nbsp;·&nbsp;&nbsp;Code&nbsp;
-        <span className="text-gold-400 font-semibold">FIRST10</span>&nbsp;for 10% off
+        Free shipping <span className="hidden sm:inline">on orders </span>above ₹999
+        {/* Only advertised while the coupon really exists and is active */}
+        {offer && (
+          <>
+            &nbsp;&nbsp;·&nbsp;&nbsp;Code&nbsp;
+            <span className="text-gold-400 font-semibold">{offer.code}</span>&nbsp;for {offer.label}
+          </>
+        )}
       </div>
 
       <header className={`sticky top-0 z-50 transition-all duration-300 border-b ${

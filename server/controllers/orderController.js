@@ -1,8 +1,16 @@
 const Order = require('../models/Order')
 const Product = require('../models/Product')
+const Coupon = require('../models/Coupon')
+const { shippingFor, couponDiscount } = require('../utils/pricing')
 const mongoose = require('mongoose')
 
 const PAGE_SIZE = 15
+
+// A cancelled order gives its coupon use back
+async function releaseCoupon(order) {
+  if (!order.couponCode) return
+  await Coupon.updateOne({ code: order.couponCode, usedCount: { $gt: 0 } }, { $inc: { usedCount: -1 } })
+}
 
 // Allowed status transitions — enforces the business flow
 const STATUS_TRANSITIONS = {
@@ -90,13 +98,22 @@ exports.create = async (req, res) => {
   const addrErr = validateAddress(req.body.shippingAddress)
   if (addrErr) return res.status(400).json({ message: addrErr })
 
-  const { guestInfo, shippingAddress, items, totalAmount, paymentMethod, paymentStatus, notes } = req.body
+  // Prices, totals and payment status sent by the browser are NOT trusted —
+  // everything below is recalculated from the database.
+  const { guestInfo, shippingAddress, items, totalAmount, paymentMethod, couponCode, notes } = req.body
+
+  // Only Cash on Delivery is accepted until a real payment gateway is connected
+  if (paymentMethod && paymentMethod !== 'cod')
+    return res.status(400).json({ message: 'Online payment is not available yet. Please choose Cash on Delivery.' })
 
   if (!Array.isArray(items) || items.length === 0)
     return res.status(400).json({ message: 'Order must contain at least one item' })
+  if (items.length > 50)
+    return res.status(400).json({ message: 'Too many items in one order' })
 
   for (const item of items) {
-    if (!item.product) return res.status(400).json({ message: 'Each item requires a product ID' })
+    if (!item || !mongoose.isValidObjectId(item.product))
+      return res.status(400).json({ message: 'Each item requires a valid product ID' })
     const qty = Number(item.quantity)
     if (!Number.isInteger(qty) || qty < 1 || qty > 100)
       return res.status(400).json({ message: `Invalid quantity for item "${item.name || item.product}"` })
@@ -104,37 +121,90 @@ exports.create = async (req, res) => {
 
   const session = await mongoose.startSession()
   session.startTransaction()
+  const fail = async (status, body) => { await session.abortTransaction(); return res.status(status).json(body) }
 
   try {
-    // ── Validate stock for every item inside the transaction ──
-    for (const item of items) {
-      const product = await Product.findById(item.product).session(session)
-      if (!product) {
-        await session.abortTransaction()
-        return res.status(400).json({ message: `Product not found: ${item.name || item.product}` })
-      }
-      if (!product.isVisible) {
-        await session.abortTransaction()
-        return res.status(400).json({ message: `"${product.name}" is no longer available` })
-      }
-      const qty = Number(item.quantity)
-      if (product.stock < qty) {
-        await session.abortTransaction()
-        return res.status(400).json({
-          message: `Not enough stock for "${product.name}". Only ${product.stock} left.`,
+    // ── Load each product once and total its quantity across all lines ──
+    // (two sizes of the same ring share one stock count)
+    const ids      = [...new Set(items.map(i => String(i.product)))]
+    const products = await Product.find({ _id: { $in: ids } }).session(session)
+    const byId     = Object.fromEntries(products.map(p => [String(p._id), p]))
+    const wanted   = {}
+    for (const item of items) wanted[item.product] = (wanted[item.product] || 0) + Number(item.quantity)
+
+    for (const id of ids) {
+      const product = byId[id]
+      if (!product) return fail(400, { message: 'A product in your bag no longer exists. Please remove it and try again.' })
+      if (!product.isVisible) return fail(400, { message: `"${product.name}" is no longer available` })
+      if (product.stock < wanted[id]) {
+        return fail(400, {
+          message:   `Not enough stock for "${product.name}". Only ${product.stock} left.`,
           productId: product._id,
           available: product.stock,
         })
       }
     }
 
-    // ── Atomically deduct stock ───────────────────────────────
+    // ── Build order lines from the database (name, price, photo) ──
+    const lines = []
     for (const item of items) {
-      await Product.findByIdAndUpdate(
-        item.product,
-        { $inc: { stock: -Number(item.quantity) } },
+      const p     = byId[String(item.product)]
+      const size  = String(item.size  || '').trim()
+      const color = String(item.color || '').trim()
+      if (size  && p.sizes?.length  && !p.sizes.includes(size))
+        return fail(400, { message: `Size "${size}" is not available for "${p.name}"` })
+      if (color && p.colors?.length && !p.colors.includes(color))
+        return fail(400, { message: `Colour "${color}" is not available for "${p.name}"` })
+      lines.push({
+        product:  p._id,
+        name:     p.name,
+        image:    p.images?.[0] || '',
+        price:    p.price,
+        quantity: Number(item.quantity),
+        size,
+        color,
+      })
+    }
+
+    const subtotal    = lines.reduce((sum, l) => sum + l.price * l.quantity, 0)
+    const shippingFee = shippingFor(subtotal)
+
+    // ── Coupon: checked and counted here, not in the browser ──
+    let discount = 0
+    let coupon = null
+    if (couponCode) {
+      coupon = await Coupon.findOne({ code: String(couponCode).toUpperCase().trim() }).session(session)
+      const result = couponDiscount(coupon, subtotal + shippingFee)
+      if (result.error) return fail(400, { message: result.error, couponError: true })
+      discount = result.discount
+    }
+
+    const total = Math.max(0, Math.round((subtotal + shippingFee - discount) * 100) / 100)
+
+    // If the bag showed a different total (price changed since it was added),
+    // stop so the customer sees the real amount before ordering.
+    if (totalAmount !== undefined && Math.abs(Number(totalAmount) - total) >= 1) {
+      return fail(409, {
+        message: `Prices in your bag have changed. The correct total is ₹${total.toLocaleString('en-IN')} — please review and place the order again.`,
+        priceChanged: true,
+        total,
+      })
+    }
+
+    // ── Count the coupon use (only now that every check has passed) ──
+    // If someone else used the last one a moment ago, stop.
+    if (coupon) {
+      const counted = await Coupon.updateOne(
+        { _id: coupon._id, usedCount: coupon.usedCount },
+        { $inc: { usedCount: 1 } },
         { session }
       )
+      if (!counted.modifiedCount) return fail(400, { message: 'This coupon has just reached its usage limit', couponError: true })
+    }
+
+    // ── Atomically deduct stock ───────────────────────────────
+    for (const id of ids) {
+      await Product.findByIdAndUpdate(id, { $inc: { stock: -wanted[id] } }, { session })
     }
 
     // ── Build and save the order ─────────────────────────────
@@ -148,10 +218,14 @@ exports.create = async (req, res) => {
         state:   addr.state.trim(),
         pincode: addr.pincode.trim(),
       },
-      items,
-      totalAmount,
-      paymentMethod:  paymentMethod  || 'cod',
-      paymentStatus:  paymentStatus  || 'pending',
+      items:         lines,
+      subtotal,
+      shippingFee,
+      couponCode:    coupon ? coupon.code : '',
+      discount,
+      totalAmount:   total,
+      paymentMethod: 'cod',
+      paymentStatus: 'pending',   // set to paid by the admin when cash is collected
       notes: notes ? String(notes).slice(0, 500) : '',
     }
 
@@ -169,7 +243,7 @@ exports.create = async (req, res) => {
     await session.commitTransaction()
     res.status(201).json(order)
   } catch (err) {
-    await session.abortTransaction()
+    if (session.inTransaction()) await session.abortTransaction()
     res.status(400).json({ message: err.message || 'Could not place order' })
   } finally {
     session.endSession()
@@ -193,13 +267,14 @@ exports.updateStatus = async (req, res) => {
       })
     }
 
-    // Restore stock when admin cancels
+    // Restore stock (and the coupon use) when admin cancels
     if (status === 'cancelled') {
       for (const item of order.items) {
         if (item.product) {
           await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } })
         }
       }
+      await releaseCoupon(order)
     }
 
     order.status = status
@@ -239,6 +314,7 @@ exports.cancelOrder = async (req, res) => {
         await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } })
       }
     }
+    await releaseCoupon(order)
 
     order.status = 'cancelled'
     await order.save()
