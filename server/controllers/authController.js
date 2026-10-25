@@ -2,6 +2,15 @@ const crypto = require('crypto')
 const jwt = require('jsonwebtoken')
 const { validationResult } = require('express-validator')
 const User = require('../models/User')
+const { createLimiter, ipOf } = require('../utils/rateLimit')
+
+// Sign-in limits: 10 wrong passwords per account, and 30 failed sign-ins per
+// visitor, every 15 minutes. Stops password guessing.
+const accountFails = createLimiter({ windowMs: 15 * 60 * 1000, max: 10 })
+const visitorFails = createLimiter({ windowMs: 15 * 60 * 1000, max: 30 })
+const TOO_MANY = { message: 'Too many sign-in attempts. Please wait 15 minutes and try again, or reset your password.' }
+const loginBlocked = (req, email) => accountFails.blocked(email) || visitorFails.blocked(ipOf(req))
+const loginFailed  = (req, email) => { accountFails.hit(email); visitorFails.hit(ipOf(req)) }
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' })
@@ -13,10 +22,15 @@ exports.login = async (req, res) => {
 
   const { email, password } = req.body
   try {
+    if (typeof password !== 'string') return res.status(400).json({ message: 'Password required' })
+    const key = 'admin:' + email.toLowerCase().trim()
+    if (loginBlocked(req, key)) return res.status(429).json(TOO_MANY)
     const user = await User.findOne({ email: email.toLowerCase().trim() })
     if (!user || !(await user.comparePassword(password))) {
+      loginFailed(req, key)
       return res.status(401).json({ message: 'Invalid credentials' })
     }
+    accountFails.reset(key)
     if (user.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access only' })
     }
@@ -33,10 +47,15 @@ exports.userLogin = async (req, res) => {
 
   const { email, password } = req.body
   try {
+    if (typeof password !== 'string') return res.status(400).json({ message: 'Password required' })
+    const key = 'user:' + email.toLowerCase().trim()
+    if (loginBlocked(req, key)) return res.status(429).json(TOO_MANY)
     const user = await User.findOne({ email: email.toLowerCase().trim() })
     if (!user || !(await user.comparePassword(password))) {
+      loginFailed(req, key)
       return res.status(401).json({ message: 'Invalid email or password' })
     }
+    accountFails.reset(key)
     if (user.role === 'admin') {
       return res.status(403).json({ message: 'Use the admin panel to sign in' })
     }
@@ -57,7 +76,7 @@ exports.me = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body
-    if (!email) return res.status(400).json({ message: 'Email is required' })
+    if (!email || typeof email !== 'string') return res.status(400).json({ message: 'Email is required' })
 
     const user = await User.findOne({ email: email.toLowerCase().trim() })
     // Always respond success to prevent email enumeration

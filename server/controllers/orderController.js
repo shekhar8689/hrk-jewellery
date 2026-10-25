@@ -6,6 +6,7 @@ const { UTR_RE, PAY_WITHIN_HOURS, getPaymentSettings, upiReady } = require('../u
 const mongoose = require('mongoose')
 
 const PAGE_SIZE = 15
+const MAX_UNPAID_PER_PHONE = 3
 
 // Courier fields from the admin form. Only sets the ones that were sent.
 function cleanTracking(body) {
@@ -36,8 +37,8 @@ async function restock(order) {
 // freed. Orders where the customer sent a transaction number are kept for the
 // admin to check. Runs at most every 10 minutes, when orders are placed or listed.
 let lastExpiry = 0
-async function expireUnpaid() {
-  if (Date.now() - lastExpiry < 10 * 60 * 1000) return
+async function expireUnpaid({ force = false } = {}) {
+  if (!force && Date.now() - lastExpiry < 10 * 60 * 1000) return
   lastExpiry = Date.now()
   try {
     const cutoff = new Date(Date.now() - PAY_WITHIN_HOURS * 3600 * 1000)
@@ -87,54 +88,20 @@ const STATUS_TRANSITIONS = {
   cancelled: [],
 }
 
-const PHONE_RE      = /^[6-9][0-9]{9}$/
-const PINCODE_RE    = /^[1-9][0-9]{5}$/
-const CITY_STATE_RE = /^[a-zA-Z\s\-]+$/   // letters, spaces, hyphens only
-
-function validateAddress(addr) {
-  const { name, phone, street, city, state, pincode } = addr || {}
-
-  if (!name || name.trim().length < 2 || name.trim().length > 100)
-    return 'Delivery name must be 2–100 characters'
-  if (!/^[a-zA-Z\s\-.']+$/.test(name.trim()))
-    return 'Name must contain letters, spaces and hyphens only'
-
-  if (!phone || !PHONE_RE.test(phone.trim()))
-    return 'Phone must be a valid 10-digit Indian mobile number starting with 6–9'
-
-  if (!street || street.trim().length < 5)
-    return 'Street address must be at least 5 characters'
-
-  if (!city || city.trim().length < 2 || city.trim().length > 50)
-    return 'City must be 2–50 characters'
-  if (!CITY_STATE_RE.test(city.trim()))
-    return 'City name cannot contain numbers or special characters'
-
-  if (!state || state.trim().length < 2)
-    return 'State is required'
-  if (!CITY_STATE_RE.test(state.trim()))
-    return 'State name cannot contain numbers or special characters'
-
-  if (!pincode || !PINCODE_RE.test(pincode.trim()))
-    return 'Pincode must be a valid 6-digit Indian pincode (100000–999999)'
-
-  return null
-}
+const { validateAddress, escapeRegex, toPage, PHONE_RE } = require('../utils/validation')
 
 // ── Admin: list all orders ────────────────────────────────────────────────────
 exports.getAll = async (req, res) => {
   try {
     await expireUnpaid()
-    const { page = 1, status, search, payment } = req.query
+    const { status, search, payment } = req.query
+    const page = toPage(req.query.page)
     const filter = {}
-    if (status) filter.status = status
+    if (Object.keys(STATUS_TRANSITIONS).includes(status)) filter.status = status
     if (['pending', 'submitted', 'paid', 'failed'].includes(payment)) filter.paymentStatus = payment
-    if (search) {
-      filter.$or = [
-        { 'shippingAddress.name':  { $regex: search, $options: 'i' } },
-        { 'shippingAddress.phone': { $regex: search, $options: 'i' } },
-        { 'guestInfo.email':       { $regex: search, $options: 'i' } },
-      ]
+    if (typeof search === 'string' && search.trim()) {
+      const re = { $regex: escapeRegex(search.trim()), $options: 'i' }
+      filter.$or = [{ 'shippingAddress.name': re }, { 'shippingAddress.phone': re }, { 'guestInfo.email': re }]
     }
     const total  = await Order.countDocuments(filter)
     const orders = await Order.find(filter)
@@ -143,7 +110,7 @@ exports.getAll = async (req, res) => {
       .skip((page - 1) * PAGE_SIZE)
       .limit(PAGE_SIZE)
 
-    res.json({ orders, total, pages: Math.ceil(total / PAGE_SIZE), page: +page })
+    res.json({ orders, total, pages: Math.ceil(total / PAGE_SIZE), page })
   } catch {
     res.status(500).json({ message: 'Server error' })
   }
@@ -177,6 +144,15 @@ exports.create = async (req, res) => {
   if (!upiReady(paySettings))
     return res.status(503).json({ message: 'Online payment is being set up. Please try again in a little while, or contact us to order.' })
   expireUnpaid()
+
+  // One phone number may have at most 3 unpaid orders at a time, so nobody can
+  // lock up the stock by placing orders they never pay for
+  const unpaid = await Order.countDocuments({
+    'shippingAddress.phone': req.body.shippingAddress.phone.trim(),
+    paymentMethod: 'upi', status: 'pending', paymentStatus: { $in: ['pending', 'submitted', 'failed'] },
+  })
+  if (unpaid >= MAX_UNPAID_PER_PHONE)
+    return res.status(429).json({ message: `You already have ${unpaid} unpaid orders. Please pay for them, or wait until they are checked, before placing another.` })
 
   if (!Array.isArray(items) || items.length === 0)
     return res.status(400).json({ message: 'Order must contain at least one item' })
@@ -507,3 +483,5 @@ exports.updatePayment = async (req, res) => {
     res.status(500).json({ message: 'Server error' })
   }
 }
+
+exports.expireUnpaid = expireUnpaid
