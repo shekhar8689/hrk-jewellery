@@ -11,6 +11,8 @@ const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     req.user = await User.findById(decoded.id).select('-password')
     if (!req.user) return res.status(401).json({ message: 'User not found' })
+    // A deactivated account is locked out at once, even with a token it already has
+    if (req.user.isActive === false) return res.status(401).json({ message: 'Your account has been deactivated. Please contact support.' })
     next()
   } catch {
     res.status(401).json({ message: 'Token invalid' })
@@ -24,7 +26,8 @@ const protectOptional = async (req, res, next) => {
     try {
       const token = auth.split(' ')[1]
       const decoded = jwt.verify(token, process.env.JWT_SECRET)
-      req.user = await User.findById(decoded.id).select('-password')
+      const user = await User.findById(decoded.id).select('-password')
+      if (user && user.isActive !== false) req.user = user
     } catch {
       // Invalid token is silently ignored — guest checkout still works
     }

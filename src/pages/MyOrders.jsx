@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Package, Truck, Home, Clock, X, ShoppingBag, RefreshCw } from 'lucide-react'
 import { useUserAuth } from '../context/UserAuthContext'
 import { getImageUrl } from '../utils/image'
+import { needsPayment } from '../utils/upi'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -63,7 +64,8 @@ function StatusTracker({ status }) {
 
 function OrderCard({ order, onCancel, cancelling }) {
   const [expanded, setExpanded] = useState(false)
-  const canCancel = ['pending', 'confirmed'].includes(order.status)
+  // Paid orders are refunded by the shop, so they are cancelled by contacting us
+  const canCancel = ['pending', 'confirmed'].includes(order.status) && !['paid', 'submitted'].includes(order.paymentStatus)
   const orderId   = order._id?.slice(-8).toUpperCase()
 
   return (
@@ -83,6 +85,27 @@ function OrderCard({ order, onCancel, cancelling }) {
           <p className="text-sm font-bold text-gray-900">₹{order.totalAmount?.toLocaleString('en-IN')}</p>
         </div>
       </div>
+
+      {/* Waiting for payment: shown right on the card */}
+      {needsPayment(order) && (
+        <div className="mx-5 mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <p className="text-sm text-amber-900 flex-1">
+            <strong>Waiting for payment.</strong>{' '}
+            {order.paymentStatus === 'failed'
+              ? "We couldn't find your UPI payment. Please check and send the transaction number again."
+              : 'Pay by UPI within 24 hours of ordering, or the order is cancelled.'}
+          </p>
+          <Link to={`/pay?id=${orderId}`} state={{ phone: order.shippingAddress?.phone }}
+            className="btn-gold text-center px-5 py-2.5 rounded-xl text-sm font-bold shrink-0">
+            Pay ₹{order.totalAmount?.toLocaleString('en-IN')} now
+          </Link>
+        </div>
+      )}
+      {order.paymentStatus === 'submitted' && order.status === 'pending' && (
+        <p className="mx-5 mt-4 text-sm bg-blue-50 border border-blue-100 text-blue-800 rounded-xl p-3">
+          We're checking your UPI payment. Your order is confirmed as soon as it shows in our account.
+        </p>
+      )}
 
       {/* Status tracker */}
       <div className="px-5 py-5">
@@ -176,13 +199,14 @@ function OrderCard({ order, onCancel, cancelling }) {
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Payment</span>
             <span className="font-medium text-gray-900 capitalize">
-              {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online'}
+              {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'UPI'}
               {' · '}
-              <span className={order.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}>
-                {order.paymentStatus}
+              <span className={order.paymentStatus === 'paid' ? 'text-green-600' : order.paymentStatus === 'failed' ? 'text-red-600' : 'text-amber-600'}>
+                {{ pending: 'not paid yet', submitted: 'being checked', paid: 'paid', failed: 'not received' }[order.paymentStatus] || order.paymentStatus}
               </span>
             </span>
           </div>
+
 
           {/* Courier details, once the shop adds them */}
           {(order.courier || order.trackingNumber) && order.status !== 'cancelled' && (

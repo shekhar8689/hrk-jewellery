@@ -6,7 +6,7 @@ import { api } from '../api'
 
 const EMPTY_FORM = {
   code: '', type: 'percentage', value: '', minOrderAmount: '', maxDiscount: '',
-  maxUses: '', expiresAt: '', description: '',
+  maxUses: '', expiresAt: '', description: '', oncePerCustomer: false,
 }
 
 function CouponForm({ initial, onSave, onClose }) {
@@ -31,6 +31,7 @@ function CouponForm({ initial, onSave, onClose }) {
         maxUses:        Number(form.maxUses)        || 0,
         expiresAt:      form.expiresAt || undefined,
         description:    form.description.trim(),
+        oncePerCustomer: !!form.oncePerCustomer,
       })
       onClose()
     } catch (e) {
@@ -105,6 +106,15 @@ function CouponForm({ initial, onSave, onClose }) {
             <input value={form.description} onChange={e => set('description', e.target.value)}
               placeholder="Internal note about this coupon" className={inputCls} />
           </div>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={!!form.oncePerCustomer} onChange={e => set('oncePerCustomer', e.target.checked)}
+              className="mt-0.5 rounded border-gray-300 text-amber-500 focus:ring-amber-400" />
+            <span>
+              <span className="text-sm font-medium text-gray-800">Once per customer</span>
+              <span className="block text-xs text-gray-500">Each phone number / account can use it only once. Turn on for first-order coupons like FIRST10.</span>
+            </span>
+          </label>
 
           {err && (
             <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2 rounded-xl">
@@ -213,6 +223,7 @@ export default function AdminCoupons() {
                       <div>
                         <p className="font-bold text-gray-900 font-mono">{coupon.code}</p>
                         {coupon.description && <p className="text-xs text-gray-400 mt-0.5">{coupon.description}</p>}
+                        {coupon.oncePerCustomer && <p className="text-[11px] text-amber-700 mt-0.5">Once per customer</p>}
                       </div>
                     </td>
                     <td className="px-4 py-3">

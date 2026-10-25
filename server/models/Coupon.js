@@ -10,6 +10,7 @@ const couponSchema = new mongoose.Schema({
   usedCount:      { type: Number, default: 0 },
   expiresAt:      { type: Date },
   isActive:       { type: Boolean, default: true },
+  oncePerCustomer:{ type: Boolean, default: false },      // e.g. a first-order coupon: one use per phone number / account
   description:    { type: String, trim: true, default: '' },
 }, { timestamps: true })
 

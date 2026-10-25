@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Star, Shield, RefreshCw, Truck, Banknote } from 'lucide-react'
+import { Star, Shield, RefreshCw, Truck, Smartphone } from 'lucide-react'
 import Hero from '../components/Hero'
 import Categories from '../components/Categories'
 import ProductCard from '../components/ProductCard'
@@ -15,7 +15,7 @@ const PROMISES = [
   { icon: Shield,    title: 'Fine Craftsmanship', desc: '18K gold-plated, tarnish-free' },
   { icon: Truck,     title: 'Free Shipping',       desc: 'On orders above ₹999' },
   { icon: RefreshCw, title: '30-Day Returns',      desc: 'Hassle-free exchange policy' },
-  { icon: Banknote,  title: 'Cash on Delivery',    desc: 'Pay when your order arrives' },
+  { icon: Smartphone, title: 'Easy UPI Payment',   desc: 'GPay, PhonePe, Paytm & more' },
 ]
 
 // Skeleton placeholder while products load

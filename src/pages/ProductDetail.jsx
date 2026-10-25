@@ -12,6 +12,7 @@ import { useCart } from '../context/CartContext'
 import { useUserAuth } from '../context/UserAuthContext'
 import { useWishlist } from '../context/WishlistContext'
 import { getImageUrl, getVideoUrl, getVideoPoster } from '../utils/image'
+import { autoPick, missingChoice } from '../utils/options'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -388,8 +389,9 @@ export default function ProductDetail({ onCartOpen }) {
       .then(data => {
         if (!data) return
         setProduct(data)
-        setSize(data.sizes?.[0] || '')
-        setColor(data.colors?.[0] || '')
+        // Pre-select only when there is a single option; otherwise the customer chooses
+        setSize(autoPick(data.sizes))
+        setColor(autoPick(data.colors))
         fetch(`${API}/products?visible=true&category=${data.category}&limit=5`)
           .then(r => r.json())
           .then(rel => setRelated((rel.products || []).filter(p => p._id !== id).slice(0, 4)))
@@ -409,8 +411,16 @@ export default function ProductDetail({ onCartOpen }) {
   const outOfStock  = product && product.stock === 0
   const lowStock    = product && product.stock > 0 && product.stock <= 5
 
+  const [choiceError, setChoiceError] = useState('')
   const handleAdd = () => {
     if (outOfStock) return
+    const missing = missingChoice(product, selectedSize, selectedColor)
+    if (missing) {
+      setChoiceError(`Please choose a ${missing}`)
+      document.getElementById('product-options')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    setChoiceError('')
     dispatch({
       type: 'ADD_ITEM',
       item: { ...product, id: product._id, stock: product.stock, selectedSize, selectedColor, qty },
@@ -588,15 +598,17 @@ export default function ProductDetail({ onCartOpen }) {
             </div>
           ) : null}
 
+          <div id="product-options" className="scroll-mt-24">
+          {choiceError && <p role="alert" className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-4">{choiceError}</p>}
           {/* Color selector */}
           {(product.colors || []).length > 0 && (
             <div className="mb-5">
               <p className="text-xs uppercase tracking-widest text-gray-600 mb-2">
-                Colour: <span className="text-gray-800 font-medium">{selectedColor}</span>
+                Colour: <span className="text-gray-800 font-medium">{selectedColor || <span className="text-gray-400 normal-case tracking-normal">choose one</span>}</span>
               </p>
               <div className="flex gap-2 flex-wrap">
                 {product.colors.map(c => (
-                  <button key={c} onClick={() => setColor(c)}
+                  <button key={c} type="button" aria-pressed={selectedColor === c} onClick={() => { setColor(c); setChoiceError('') }}
                     className={`px-4 py-2 text-xs border transition-colors ${selectedColor === c ? 'border-gold-500 bg-gold-50 text-gold-700' : 'border-gray-300 text-gray-600 hover:border-gold-400'}`}>
                     {c}
                   </button>
@@ -609,11 +621,11 @@ export default function ProductDetail({ onCartOpen }) {
           {(product.sizes || []).length > 0 && product.sizes[0] !== 'One Size' && (
             <div className="mb-5">
               <p className="text-xs uppercase tracking-widest text-gray-600 mb-2">
-                Size: <span className="text-gray-800 font-medium">{selectedSize}</span>
+                Size: <span className="text-gray-800 font-medium">{selectedSize || <span className="text-gray-400 normal-case tracking-normal">choose one</span>}</span>
               </p>
               <div className="flex gap-2 flex-wrap">
                 {product.sizes.map(s => (
-                  <button key={s} onClick={() => setSize(s)}
+                  <button key={s} type="button" aria-pressed={selectedSize === s} onClick={() => { setSize(s); setChoiceError('') }}
                     className={`w-10 h-10 text-sm border transition-colors ${selectedSize === s ? 'border-gold-500 bg-gold-500 text-white' : 'border-gray-300 text-gray-600 hover:border-gold-400'}`}>
                     {s}
                   </button>
@@ -621,6 +633,8 @@ export default function ProductDetail({ onCartOpen }) {
               </div>
             </div>
           )}
+
+          </div>
 
           {/* Qty + Add to bag */}
           <div ref={addBtnRef} className="flex gap-3 mb-4">

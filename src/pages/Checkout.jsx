@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingBag, Truck, CheckCircle, X, ChevronRight, AlertTriangle, Tag, Loader2 } from 'lucide-react'
+import { ShoppingBag, CheckCircle, X, ChevronRight, AlertTriangle, Tag, Loader2, Smartphone } from 'lucide-react'
 import { useCart }     from '../context/CartContext'
 import { useUserAuth } from '../context/UserAuthContext'
 import { getImageUrl } from '../utils/image'
+import { rememberPhone } from '../utils/upi'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -22,7 +23,7 @@ const CITY_STATE_RE = /^[a-zA-Z\s\-]+$/
 
 function validateForm(form) {
   if (!form.name.trim() || form.name.trim().length < 2) return 'Full name must be at least 2 characters'
-  if (!/^[a-zA-Z\s\-.']+$/.test(form.name.trim())) return 'Name must contain letters, spaces, and hyphens only'
+  if (!/^[\p{L}\p{M}\s\-.']+$/u.test(form.name.trim())) return 'Name must contain letters, spaces, and hyphens only'
   if (!PHONE_RE.test(form.phone.trim())) return 'Phone must be a valid 10-digit Indian mobile number (starts with 6–9)'
   if (form.email.trim() && !EMAIL_RE.test(form.email.trim())) return 'Enter a valid email address'
   if (!form.street.trim() || form.street.trim().length < 5) return 'Street address must be at least 5 characters'
@@ -64,11 +65,27 @@ export default function Checkout() {
   const [fieldErrors, setFieldErrors] = useState({})
   const errorRef = useRef(null)
 
+  // The account loads a moment after the page: fill in what's still empty
+  useEffect(() => {
+    if (!user) return
+    setForm(f => ({
+      ...f,
+      name:  f.name  || user.name  || '',
+      email: f.email || user.email || '',
+      phone: f.phone || (user.phone || '').replace(/\D/g, '').slice(-10),
+    }))
+  }, [user])
+
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); if (fieldErrors[k]) setFieldErrors(fe => ({ ...fe, [k]: '' })) }
 
-  // Cash on Delivery only, until a real payment gateway (e.g. Razorpay) is connected
-  const paymentMethod = 'cod'
+  // Paid in advance by UPI (QR code / UPI app on the next page). No Cash on Delivery.
+  const paymentMethod = 'upi'
+  const [payReady, setPayReady] = useState(true)   // false until the shop has added its UPI ID
+  useEffect(() => {
+    fetch(`${API}/payment`, { cache: 'no-store' }).then(r => r.json()).then(d => setPayReady(!!d.ready)).catch(() => {})
+  }, [])
   const [submitting,setSubmitting]= useState(false)
+  const submittingRef = useRef(false)   // blocks a second order while the first is being sent
   const [error,     setError]    = useState('')
 
   // Coupon state
@@ -209,13 +226,18 @@ export default function Checkout() {
     if (form.city.trim() && !CITY_STATE_RE.test(form.city.trim())) fe.city = 'City cannot contain numbers'
     if (Object.keys(fe).length) { setFieldErrors(fe); return }
 
+    if (submittingRef.current) return
+    submittingRef.current = true
     setSubmitting(true)
     try {
       const order = await placeOrder()
+      const shortId = order._id.slice(-8).toUpperCase()
+      rememberPhone(shortId, order.shippingAddress.phone)
       dispatch({ type: 'CLEAR' })
-      navigate('/order-success', { state: { order, paid: false } })
+      // replace: pressing Back later doesn't land on an empty checkout
+      navigate(`/pay?id=${shortId}`, { replace: true, state: { phone: order.shippingAddress.phone, justPlaced: true } })
     } catch (err) { setError(err.message) }
-    finally { setSubmitting(false) }
+    finally { setSubmitting(false); submittingRef.current = false }
   }
 
   /* ── Main Form ─────────────────────────────────────────────────────────────── */
@@ -265,7 +287,7 @@ export default function Checkout() {
                 </div>
                 <Field label="Phone Number" required error={fieldErrors.phone}>
                   <input required type="tel" inputMode="numeric" autoComplete="tel-national" name="phone" value={form.phone}
-                    onChange={e => set('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    onChange={e => set('phone', e.target.value.replace(/\D/g, '').slice(-10))}
                     placeholder="10-digit mobile number"
                     className={fieldErrors.phone ? inputErrorClass : inputClass} />
                 </Field>
@@ -307,11 +329,11 @@ export default function Checkout() {
             <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-6">
                 <span className="w-7 h-7 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">2</span>
-                <h2 className="font-semibold text-gray-900">Payment Method</h2>
+                <h2 className="font-semibold text-gray-900">Payment</h2>
               </div>
               <div className="space-y-3">
                 {[
-                  { value: 'cod',    icon: Truck,      title: 'Cash on Delivery',         desc: 'Pay when your order arrives. No advance payment needed.' },
+                  { value: 'upi', icon: Smartphone, title: 'Pay online by UPI', desc: 'GPay, PhonePe, Paytm, BHIM or any UPI app. After placing the order you get a QR code with the exact amount.' },
                 ].map(({ value, icon: Icon, title, desc }) => (
                   <label key={value}
                     className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
@@ -319,7 +341,7 @@ export default function Checkout() {
                     <input type="radio" name="payment" value={value}
                       checked={paymentMethod === value} readOnly
                       className="accent-amber-500 w-4 h-4" />
-                    <Icon size={22} className={paymentMethod === value ? 'text-amber-500' : 'text-gray-400'} />
+                    <Icon size={22} className={`shrink-0 ${paymentMethod === value ? 'text-amber-500' : 'text-gray-400'}`} />
                     <div>
                       <p className="font-semibold text-gray-900 text-sm">{title}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
@@ -327,6 +349,11 @@ export default function Checkout() {
                     {paymentMethod === value && <CheckCircle size={18} className="ml-auto text-amber-500 shrink-0" />}
                   </label>
                 ))}
+                {!payReady && (
+                  <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                    Online payment is being set up. Please try again in a little while, or <Link to="/contact" className="underline">contact us</Link> to order.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -367,7 +394,7 @@ export default function Checkout() {
                       <span className="text-sm font-semibold text-green-700">{appliedCoupon.code}</span>
                       <span className="text-xs text-green-600">— saved ₹{appliedCoupon.discount.toLocaleString('en-IN')}</span>
                     </div>
-                    <button onClick={removeCoupon} className="text-gray-400 hover:text-gray-600 ml-2">
+                    <button type="button" onClick={removeCoupon} aria-label="Remove coupon" className="text-gray-400 hover:text-gray-600 ml-2">
                       <X size={14} />
                     </button>
                   </div>
@@ -422,12 +449,12 @@ export default function Checkout() {
                 </div>
               </div>
 
-              <button type="submit" disabled={submitting}
+              <button type="submit" disabled={submitting || !payReady}
                 className="w-full mt-6 py-4 text-sm font-bold tracking-wide uppercase transition-colors disabled:opacity-60 btn-gold">
-                {submitting ? 'Please wait…' : `Place Order · ₹${grandTotal.toLocaleString('en-IN')}`}
+                {submitting ? 'Please wait…' : `Place Order & Pay · ₹${grandTotal.toLocaleString('en-IN')}`}
               </button>
               <p className="text-center text-xs text-gray-400 mt-3 flex items-center justify-center gap-1">
-                🔒 Safe &amp; secure checkout
+                🔒 You pay on the next step, by UPI
               </p>
             </div>
           </div>

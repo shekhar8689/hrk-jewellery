@@ -10,7 +10,8 @@ exports.getStats = async (req, res) => {
         Product.countDocuments(),
         User.countDocuments({ role: 'user' }),
         Order.aggregate([
-          { $match: { status: { $ne: 'cancelled' } } },
+          // Money actually received: paid UPI orders (and delivered Cash on Delivery orders from before)
+          { $match: { status: { $ne: 'cancelled' }, $or: [{ paymentStatus: 'paid' }, { paymentMethod: 'cod', status: 'delivered' }] } },
           { $group: { _id: null, total: { $sum: '$totalAmount' } } },
         ]),
         Order.find()

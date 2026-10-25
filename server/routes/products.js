@@ -1,7 +1,7 @@
 const router = require('express').Router()
 const { body } = require('express-validator')
 const ctrl = require('../controllers/productController')
-const { protect, adminOnly } = require('../middleware/auth')
+const { protect, protectOptional, adminOnly } = require('../middleware/auth')
 const { mediaUpload } = require('../config/cloudinary')
 
 const productFiles = mediaUpload([
@@ -9,8 +9,9 @@ const productFiles = mediaUpload([
   { name: 'video',  maxCount: 1, kind: 'video' },
 ])
 
-router.get('/', ctrl.getAll)
-router.get('/:id', ctrl.getOne)
+// protectOptional: the admin (signed in) also sees hidden products
+router.get('/', protectOptional, ctrl.getAll)
+router.get('/:id', protectOptional, ctrl.getOne)
 
 router.post('/',
   protect, adminOnly,

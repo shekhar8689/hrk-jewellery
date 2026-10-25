@@ -1,17 +1,17 @@
 const User = require('../models/User')
 const Order = require('../models/Order')
+const { escapeRegex, toPage } = require('../utils/validation')
 
 const PAGE_SIZE = 15
 
 exports.getAll = async (req, res) => {
   try {
-    const { page = 1, search } = req.query
+    const { search } = req.query
+    const page = toPage(req.query.page)
     const filter = { role: 'user' }
-    if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-      ]
+    if (typeof search === 'string' && search.trim()) {
+      const re = { $regex: escapeRegex(search.trim()), $options: 'i' }
+      filter.$or = [{ name: re }, { email: re }]
     }
     const total = await User.countDocuments(filter)
     const users = await User.find(filter)
@@ -19,7 +19,7 @@ exports.getAll = async (req, res) => {
       .skip((page - 1) * PAGE_SIZE)
       .limit(PAGE_SIZE)
 
-    res.json({ users, total, pages: Math.ceil(total / PAGE_SIZE), page: +page })
+    res.json({ users, total, pages: Math.ceil(total / PAGE_SIZE), page })
   } catch {
     res.status(500).json({ message: 'Server error' })
   }

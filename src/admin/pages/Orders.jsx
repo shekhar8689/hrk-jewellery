@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Search, X, AlertTriangle } from 'lucide-react'
+import { Search, X, AlertTriangle, CheckCircle, Copy } from 'lucide-react'
 import AdminLayout from '../components/AdminLayout'
 import Pagination from '../components/Pagination'
 import Toast from '../../components/Toast'
@@ -15,6 +15,71 @@ const STATUS_COLOR = {
   cancelled: 'bg-red-100 text-red-700',
 }
 
+// Payment badge for each order
+const PAYMENT = {
+  pending:   { label: 'Not paid',         cls: 'bg-gray-100 text-gray-600' },
+  submitted: { label: 'Payment to check', cls: 'bg-orange-100 text-orange-700' },
+  paid:      { label: 'Paid',             cls: 'bg-green-100 text-green-700' },
+  failed:    { label: 'Not received',     cls: 'bg-red-100 text-red-700' },
+}
+const paymentBadge = o => o.paymentMethod === 'cod'
+  ? { label: o.paymentStatus === 'paid' ? 'COD · paid' : 'COD', cls: 'bg-gray-100 text-gray-600' }
+  : PAYMENT[o.paymentStatus] || PAYMENT.pending
+
+// Payment check for UPI orders
+function PaymentPanel({ order, onPayment }) {
+  const [busy, setBusy]   = useState(false)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+  if (order.paymentMethod !== 'upi') return null
+  const badge = paymentBadge(order)
+  const mark = async received => {
+    if (!received && !window.confirm('Mark this payment as NOT received? The customer will be asked to check and send the transaction number again.')) return
+    setBusy(true); setError('')
+    try { await onPayment(order._id, received) } catch (err) { setError(err.message) } finally { setBusy(false) }
+  }
+  const copy = async () => { try { await navigator.clipboard.writeText(order.upiRef) } catch { /* ignore */ } setCopied(true); setTimeout(() => setCopied(false), 1500) }
+  const fmt = d => d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''
+  return (
+    <div className="rounded-xl border border-gray-100 p-4 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-medium text-sm text-gray-700">UPI Payment</h3>
+        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${badge.cls}`}>{badge.label}</span>
+      </div>
+      <p className="text-sm text-gray-600">{order.paymentStatus === 'paid' ? 'Amount received:' : 'Amount to receive:'} <strong className="text-gray-900">₹{order.totalAmount?.toLocaleString('en-IN')}</strong>{order.payTo?.upiId ? <> to <span className="font-mono">{order.payTo.upiId}</span></> : null}</p>
+      {order.upiRef ? (
+        <p className="text-sm text-gray-600 flex items-center gap-2 flex-wrap">
+          Transaction no. <span className="font-mono font-semibold text-gray-900">{order.upiRef}</span>
+          <button type="button" onClick={copy} className="inline-flex items-center gap-1 text-xs text-amber-700 hover:underline">
+            {copied ? <CheckCircle size={12} /> : <Copy size={12} />} {copied ? 'Copied' : 'Copy'}
+          </button>
+          {order.paymentSubmittedAt && <span className="text-xs text-gray-400">sent {fmt(order.paymentSubmittedAt)}</span>}
+        </p>
+      ) : order.paymentStatus !== 'paid' && (
+        <p className="text-sm text-gray-500">The customer hasn't sent a transaction number yet.</p>
+      )}
+      {order.paymentStatus === 'paid' && order.paidAt && <p className="text-xs text-green-700">Marked as received {fmt(order.paidAt)}</p>}
+      {order.paymentStatus === 'submitted' && (
+        <p className="text-xs text-gray-500">Check your bank or UPI app for this transaction number and amount before shipping.</p>
+      )}
+      {order.paymentStatus === 'paid' && order.status === 'cancelled' && (
+        <p className="text-xs text-red-600">This order is cancelled but was paid. Please refund ₹{order.totalAmount?.toLocaleString('en-IN')} to the customer.</p>
+      )}
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      {order.paymentStatus !== 'paid' && (
+        <div className="flex gap-2 pt-1">
+          <button type="button" disabled={busy} onClick={() => mark(true)}
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-50">Payment received</button>
+          {order.paymentStatus === 'submitted' && order.status !== 'cancelled' && (
+            <button type="button" disabled={busy} onClick={() => mark(false)}
+              className="flex-1 border border-red-200 text-red-700 hover:bg-red-50 py-2 rounded-lg text-sm font-medium disabled:opacity-50">Not received</button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Only valid forward transitions — mirrors the backend enforcement
 const NEXT_STATUSES = {
   pending:   ['confirmed', 'cancelled'],
@@ -25,7 +90,7 @@ const NEXT_STATUSES = {
 }
 
 // ── Order Detail Modal ────────────────────────────────────────────────────────
-function OrderDetail({ order, onClose, onStatusChange }) {
+function OrderDetail({ order, onClose, onStatusChange, onPayment }) {
   const [status,  setStatus]  = useState(order.status)
   const [saving,  setSaving]  = useState(false)
   const [error,   setError]   = useState('')
@@ -40,6 +105,8 @@ function OrderDetail({ order, onClose, onStatusChange }) {
   const showTracking = ['confirmed', 'shipped', 'delivered'].includes(order.status) || status === 'shipped'
 
   const validNext   = NEXT_STATUSES[order.status] || []
+  // UPI orders are confirmed only after the money has arrived
+  const unpaid      = order.paymentMethod === 'upi' && order.paymentStatus !== 'paid'
   const canSave     = (validNext.length > 0 && status !== order.status) || trackingChanged
 
   const save = async () => {
@@ -135,6 +202,8 @@ function OrderDetail({ order, onClose, onStatusChange }) {
             </div>
           </div>
 
+          <PaymentPanel order={order} onPayment={onPayment} />
+
           {/* Error */}
           {error && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
@@ -167,9 +236,14 @@ function OrderDetail({ order, onClose, onStatusChange }) {
               >
                 <option value={order.status} className="capitalize">{order.status} (current)</option>
                 {validNext.map(s => (
-                  <option key={s} value={s} className="capitalize">{s}</option>
+                  <option key={s} value={s} className="capitalize" disabled={s === 'confirmed' && unpaid}>
+                    {s}{s === 'confirmed' && unpaid ? ' (after payment is received)' : ''}
+                  </option>
                 ))}
               </select>
+            )}
+            {order.status === 'pending' && unpaid && (
+              <p className="text-xs text-gray-500 mt-1.5">Confirm the order after you mark the payment as received.</p>
             )}
           </div>
 
@@ -228,6 +302,7 @@ export default function Orders() {
   const [loading,      setLoading]      = useState(true)
   const [search,       setSearch]       = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [paymentFilter, setPaymentFilter] = useState(searchParams.get('payment') || '')
   const [selected,     setSelected]     = useState(null)
   const [page,         setPage]         = useState(1)
   const [toast,        setToast]        = useState(null)   // { message, type }
@@ -237,6 +312,7 @@ export default function Orders() {
     const params = { page }
     if (search)       params.search = search
     if (statusFilter) params.status = statusFilter
+    if (paymentFilter) params.payment = paymentFilter
     api.getOrders(params)
       .then(res => {
         setData(res)
@@ -250,7 +326,7 @@ export default function Orders() {
       })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [page, search, statusFilter, searchParams])
+  }, [page, search, statusFilter, paymentFilter, searchParams])
 
   useEffect(() => { load() }, [load])
 
@@ -262,6 +338,13 @@ export default function Orders() {
       orders: prev.orders.map(o => o._id === id ? { ...o, ...updated } : o),
     }))
     setToast({ message: `Order ${updated.status === newStatus ? `status updated to "${newStatus}"` : 'details saved'}`, type: 'success' })
+  }
+
+  const handlePayment = async (id, received) => {
+    const updated = await api.setOrderPayment(id, received)
+    setData(prev => ({ ...prev, orders: prev.orders.map(o => o._id === id ? { ...o, ...updated } : o) }))
+    setSelected(s => s && s._id === id ? { ...s, ...updated } : s)
+    setToast({ message: received ? 'Payment marked as received. You can confirm the order now.' : 'Marked as not received. The customer is asked to check.', type: 'success' })
   }
 
   return (
@@ -293,6 +376,14 @@ export default function Orders() {
               <option key={s} value={s} className="capitalize">{s}</option>
             ))}
           </select>
+          <select
+            value={paymentFilter}
+            onChange={e => { setPaymentFilter(e.target.value); setPage(1) }}
+            className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
+            <option value="">All Payments</option>
+            {Object.entries(PAYMENT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
         </div>
 
         {/* Table */}
@@ -312,6 +403,7 @@ export default function Orders() {
                     <th className="px-4 py-3 text-left">Customer</th>
                     <th className="px-4 py-3 text-left">Items</th>
                     <th className="px-4 py-3 text-left">Total</th>
+                    <th className="px-4 py-3 text-left">Payment</th>
                     <th className="px-4 py-3 text-left">Status</th>
                     <th className="px-4 py-3 text-left">Date</th>
                     <th className="px-4 py-3 text-right">Action</th>
@@ -332,6 +424,11 @@ export default function Orders() {
                       </td>
                       <td className="px-4 py-3 text-sm font-semibold text-gray-900">
                         ₹{order.totalAmount?.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap ${paymentBadge(order).cls}`}>
+                          {paymentBadge(order).label}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         {/* Badge reflects optimistic local state immediately */}
@@ -368,6 +465,7 @@ export default function Orders() {
           order={selected}
           onClose={() => setSelected(null)}
           onStatusChange={handleStatusChange}
+          onPayment={handlePayment}
         />
       )}
 

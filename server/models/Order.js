@@ -37,8 +37,17 @@ const orderSchema = new mongoose.Schema({
     enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'],
     default: 'pending',
   },
-  paymentMethod: { type: String, enum: ['cod', 'online'], default: 'cod' },
-  paymentStatus: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
+  // New orders are paid in advance by UPI. ('cod' / 'online' are kept for old orders.)
+  paymentMethod: { type: String, enum: ['upi', 'cod', 'online'], default: 'upi' },
+  // pending   = not paid yet
+  // submitted = customer says they paid and gave the UPI transaction number; admin checks the bank
+  // paid      = admin saw the money arrive
+  // failed    = admin could not find the payment; customer can send the number again
+  paymentStatus: { type: String, enum: ['pending', 'submitted', 'paid', 'failed'], default: 'pending' },
+  upiRef:          { type: String, trim: true, default: '' },   // 12-digit UPI transaction number from the customer
+  payTo:           { upiId: String, payeeName: String },       // the UPI ID shown to the customer for this order
+  paymentSubmittedAt: Date,
+  paidAt:          Date,
   notes: { type: String, default: '' },
   // Tracking — filled in by the admin when the parcel is shipped
   courier:        { type: String, trim: true, maxlength: 60,  default: '' },
@@ -47,5 +56,7 @@ const orderSchema = new mongoose.Schema({
   // When each status was reached (shown on the customer's tracking page)
   statusHistory: [{ status: String, at: { type: Date, default: Date.now }, _id: false }],
 }, { timestamps: true })
+
+orderSchema.index({ upiRef: 1 })
 
 module.exports = mongoose.model('Order', orderSchema)

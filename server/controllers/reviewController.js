@@ -1,3 +1,4 @@
+const { escapeRegex, toPage, toLimit } = require('../utils/validation')
 const Review  = require('../models/Review')
 const Product = require('../models/Product')
 const Order   = require('../models/Order')
@@ -161,24 +162,25 @@ exports.deleteReview = async (req, res) => {
 // ── GET /api/admin/reviews  (admin) ──────────────────────────────────────────
 exports.adminGetReviews = async (req, res) => {
   try {
-    const { status, productId, search, page = 1, limit = 20 } = req.query
+    const { status, productId, search } = req.query
+    const page = toPage(req.query.page), limit = toLimit(req.query.limit, 20, 100)
     const filter = {}
-    if (status && status !== 'all') filter.status = status
-    if (productId) filter.product = productId
-    if (search) filter.userName = { $regex: search, $options: 'i' }
+    if (['pending', 'approved', 'rejected'].includes(status)) filter.status = status
+    if (typeof productId === 'string' && /^[0-9a-f]{24}$/i.test(productId)) filter.product = productId
+    if (typeof search === 'string' && search.trim()) filter.userName = { $regex: escapeRegex(search.trim()), $options: 'i' }
 
-    const skip = (Number(page) - 1) * Number(limit)
+    const skip = (page - 1) * limit
     const [reviews, total] = await Promise.all([
       Review.find(filter)
         .populate('user', 'name email')
         .populate('product', 'name')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(Number(limit)),
+        .limit(limit),
       Review.countDocuments(filter),
     ])
 
-    res.json({ reviews, total, page: Number(page), pages: Math.ceil(total / Number(limit)) })
+    res.json({ reviews, total, page, pages: Math.ceil(total / limit) })
   } catch {
     res.status(500).json({ message: 'Server error' })
   }

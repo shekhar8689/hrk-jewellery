@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Package, CheckCircle, Truck, Home, XCircle, Search, ExternalLink, Copy } from 'lucide-react'
 import { getImageUrl } from '../utils/image'
+import { rememberPhone, needsPayment } from '../utils/upi'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -13,7 +14,7 @@ const STEPS = [
 ]
 
 const MESSAGES = {
-  pending:   'We have received your order and will confirm it within 24 hours.',
+  pending:   'We have received your order. We confirm it once the payment is received.',
   confirmed: 'Your order is confirmed and being packed.',
   shipped:   'Your order is on its way.',
   delivered: 'Your order has been delivered. Enjoy your jewellery!',
@@ -90,6 +91,7 @@ export default function TrackOrder() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Could not find that order')
       setOrder(data)
+      rememberPhone(data.orderId, phone)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -147,6 +149,22 @@ export default function TrackOrder() {
             <Timeline order={order} />
             <p className="text-sm text-gray-600 mt-5">{MESSAGES[order.status]}</p>
 
+            {needsPayment(order) && order.payTo && (
+              <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm flex flex-col sm:flex-row sm:items-center gap-3">
+                <p className="text-amber-900 flex-1">
+                  {order.paymentStatus === 'failed'
+                    ? <>We couldn't find your payment for transaction number <span className="font-mono">{order.upiRef}</span>. Please check and send it again.</>
+                    : <>Payment of <strong>{rupees(order.totalAmount)}</strong> is pending. Pay by UPI to confirm your order.</>}
+                </p>
+                <Link to={`/pay?id=${order.orderId}`} className="btn-gold px-5 py-2.5 rounded-xl text-sm font-bold text-center shrink-0">Pay now</Link>
+              </div>
+            )}
+            {order.paymentStatus === 'submitted' && order.status === 'pending' && (
+              <p className="mt-4 bg-blue-50 border border-blue-100 text-blue-800 rounded-xl px-4 py-3 text-sm">
+                We're checking your UPI payment (transaction no. <span className="font-mono">{order.upiRef}</span>). Your order is confirmed as soon as it shows in our account.
+              </p>
+            )}
+
             {(order.courier || order.trackingNumber) && order.status !== 'cancelled' && (
               <div className="mt-4 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-sm">
                 <p className="text-gray-700">
@@ -196,7 +214,9 @@ export default function TrackOrder() {
               <p className="text-xs text-gray-500 pt-1">
                 {order.paymentMethod === 'cod'
                   ? (order.paymentStatus === 'paid' ? 'Paid in cash on delivery' : 'Pay in cash when it arrives')
-                  : `Payment: ${order.paymentStatus}`}
+                  : order.paymentStatus === 'paid' ? 'Paid by UPI'
+                  : order.paymentStatus === 'submitted' ? 'UPI payment being checked'
+                  : 'UPI payment pending'}
               </p>
             </div>
           </div>

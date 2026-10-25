@@ -1,20 +1,28 @@
 const Product = require('../models/Product')
 const { fileToUrl } = require('../config/cloudinary')
 const { validationResult } = require('express-validator')
+const { toPage, toLimit } = require('../utils/validation')
+
+const CATEGORIES = ['rings', 'necklaces', 'earrings', 'bracelets', 'anklets']
+const isAdmin = req => req.user?.role === 'admin'
 
 const DEFAULT_PAGE_SIZE = 12
 
 exports.getAll = async (req, res) => {
   try {
-    const { page = 1, category, search, visible, isNew, isBestseller, limit } = req.query
+    const { category, search, visible, isNew, isBestseller } = req.query
+    const page = toPage(req.query.page)
     const filter = {}
-    if (category && category !== 'all') filter.category = category
-    if (search) filter.$text = { $search: search }
-    if (visible !== undefined) filter.isVisible = visible === 'true'
+    // Only plain text values are used, so "?category[$ne]=x" can't turn into a database operator
+    if (category !== undefined && category !== 'all') filter.category = CATEGORIES.includes(category) ? category : '__none__'
+    if (typeof search === 'string' && search.trim()) filter.$text = { $search: search.slice(0, 100) }
+    // Hidden products are for the admin only
+    if (!isAdmin(req)) filter.isVisible = true
+    else if (visible !== undefined) filter.isVisible = visible === 'true'
     if (isNew !== undefined) filter.isNew = isNew === 'true'
     if (isBestseller !== undefined) filter.isBestseller = isBestseller === 'true'
 
-    const pageSize = limit ? Math.min(Number(limit), 200) : DEFAULT_PAGE_SIZE
+    const pageSize = toLimit(req.query.limit, DEFAULT_PAGE_SIZE, 200)
     // Run the count and the page query at the same time; .lean() returns plain
     // objects, which is much faster than full Mongoose documents for read-only lists
     const [total, products] = await Promise.all([
@@ -26,7 +34,7 @@ exports.getAll = async (req, res) => {
         .lean(),
     ])
 
-    res.json({ products, total, pages: Math.ceil(total / pageSize), page: +page })
+    res.json({ products, total, pages: Math.ceil(total / pageSize), page })
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
   }
@@ -35,7 +43,7 @@ exports.getAll = async (req, res) => {
 exports.getOne = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).lean()
-    if (!product) return res.status(404).json({ message: 'Product not found' })
+    if (!product || (!product.isVisible && !isAdmin(req))) return res.status(404).json({ message: 'Product not found' })
     res.json(product)
   } catch {
     res.status(404).json({ message: 'Product not found' })
