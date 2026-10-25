@@ -28,7 +28,7 @@ describe('Prices are decided by the server', () => {
   test('the browser cannot set payment status, discount or totals', async () => {
     const p = await makeProduct()
     const r = await placeOrder({ product: p, paymentStatus: 'paid', status: 'delivered', discount: 1899, subtotal: 0, upiRef: '412345678901' })
-    expect(r.status).toBe(201)
+    expect([r.status, r.body.message]).toEqual([201, undefined])
     expect(r.body).toEqual(expect.objectContaining({ paymentStatus: 'pending', status: 'pending', discount: 0, totalAmount: 1899, upiRef: '' }))
   })
 

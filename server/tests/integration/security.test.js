@@ -10,8 +10,8 @@ describe('Placing lots of fake orders to lock up stock', () => {
     const p = await makeProduct({ stock: 50 })
     const order = () => api().post('/api/orders').send({ shippingAddress: { ...ADDRESS, phone: '9811111111' }, items: [{ product: String(p._id), quantity: 1 }] })
     const codes = []
-    for (let i = 0; i < 4; i++) codes.push((await order()).status)
-    expect(codes).toEqual([201, 201, 201, 429])
+    for (let i = 0; i < 4; i++) { const r = await order(); codes.push(r.status === 201 ? 201 : `${r.status} ${r.body.message}`) }
+    expect(codes).toEqual([201, 201, 201, expect.stringMatching(/^429 /)])
     const fourth = await order()
     expect(fourth.body.message).toMatch(/unpaid orders/)
   })
