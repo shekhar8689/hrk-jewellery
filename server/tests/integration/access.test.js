@@ -13,6 +13,7 @@ const ADMIN_ROUTES = [
   ['get', '/api/dashboard/stats'],
   ['get', '/api/admin/reviews'], ['delete', `/api/reviews/${ID}`],
   ['get', '/api/categories/admin'],
+  ['get', '/api/contact'], ['patch', `/api/contact/${ID}`],
 ]
 
 let customer

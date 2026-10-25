@@ -104,6 +104,16 @@ describe('Password reset', () => {
     } finally { process.env.NODE_ENV = 'test' }
   })
 
+  test('the reset link is not written to the server log in production', async () => {
+    const { user } = await makeUser()
+    const spy = jest.spyOn(console, 'log').mockImplementation(() => {})
+    process.env.NODE_ENV = 'production'
+    try {
+      await api().post('/api/auth/forgot-password').send({ email: user.email })
+      expect(spy.mock.calls.flat().join(' ')).not.toMatch(/reset-password/)
+    } finally { process.env.NODE_ENV = 'test'; spy.mockRestore() }
+  })
+
   test('same answer for unknown emails (no account guessing)', async () => {
     const r = await api().post('/api/auth/forgot-password').send({ email: 'nobody@test.com' })
     expect(r.status).toBe(200)

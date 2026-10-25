@@ -46,7 +46,7 @@ function PaymentPanel({ order, onPayment }) {
         <h3 className="font-medium text-sm text-gray-700">UPI Payment</h3>
         <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${badge.cls}`}>{badge.label}</span>
       </div>
-      <p className="text-sm text-gray-600">Amount to receive: <strong className="text-gray-900">₹{order.totalAmount?.toLocaleString('en-IN')}</strong>{order.payTo?.upiId ? <> to <span className="font-mono">{order.payTo.upiId}</span></> : null}</p>
+      <p className="text-sm text-gray-600">{order.paymentStatus === 'paid' ? 'Amount received:' : 'Amount to receive:'} <strong className="text-gray-900">₹{order.totalAmount?.toLocaleString('en-IN')}</strong>{order.payTo?.upiId ? <> to <span className="font-mono">{order.payTo.upiId}</span></> : null}</p>
       {order.upiRef ? (
         <p className="text-sm text-gray-600 flex items-center gap-2 flex-wrap">
           Transaction no. <span className="font-mono font-semibold text-gray-900">{order.upiRef}</span>

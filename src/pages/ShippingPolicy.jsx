@@ -46,7 +46,7 @@ export default function ShippingPolicy() {
         </section>
         <section>
           <h2 className="text-lg font-semibold text-gray-800 mb-2">Order Tracking</h2>
-          <p>Once your order is shipped, you can track it from <strong>My Orders</strong> in your account. You will also receive SMS/email updates from our courier partner.</p>
+          <p>Once your order is shipped, you can track it on the <strong>Track Order</strong> page with your Order ID and mobile number (or under <strong>My Orders</strong> if you have an account). It shows the courier name, tracking number and a link to the courier's website.</p>
         </section>
         <section>
           <h2 className="text-lg font-semibold text-gray-800 mb-2">Damaged or Missing Items</h2>

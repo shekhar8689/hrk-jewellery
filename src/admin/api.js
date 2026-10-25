@@ -41,6 +41,10 @@ export const api = {
   updateOrderStatus: (id, status, tracking = {}) => req('PATCH', `/orders/${id}/status`, { status, ...tracking }),
   setOrderPayment: (id, received) => req('PATCH', `/orders/${id}/payment`, { received }),
 
+  // Contact page messages
+  getMessages: (params = {}) => req('GET', '/contact?' + new URLSearchParams(params)),
+  setMessageHandled: (id, handled) => req('PATCH', `/contact/${id}`, { handled }),
+
   // UPI payment settings
   getPaymentSettings: () => req('GET', '/payment/admin'),
   updatePaymentSettings: (data) => req('PUT', '/payment', data),

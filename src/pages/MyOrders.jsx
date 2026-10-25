@@ -86,6 +86,27 @@ function OrderCard({ order, onCancel, cancelling }) {
         </div>
       </div>
 
+      {/* Waiting for payment: shown right on the card */}
+      {needsPayment(order) && (
+        <div className="mx-5 mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <p className="text-sm text-amber-900 flex-1">
+            <strong>Waiting for payment.</strong>{' '}
+            {order.paymentStatus === 'failed'
+              ? "We couldn't find your UPI payment. Please check and send the transaction number again."
+              : 'Pay by UPI within 24 hours of ordering, or the order is cancelled.'}
+          </p>
+          <Link to={`/pay?id=${orderId}`} state={{ phone: order.shippingAddress?.phone }}
+            className="btn-gold text-center px-5 py-2.5 rounded-xl text-sm font-bold shrink-0">
+            Pay ₹{order.totalAmount?.toLocaleString('en-IN')} now
+          </Link>
+        </div>
+      )}
+      {order.paymentStatus === 'submitted' && order.status === 'pending' && (
+        <p className="mx-5 mt-4 text-sm bg-blue-50 border border-blue-100 text-blue-800 rounded-xl p-3">
+          We're checking your UPI payment. Your order is confirmed as soon as it shows in our account.
+        </p>
+      )}
+
       {/* Status tracker */}
       <div className="px-5 py-5">
         <StatusTracker status={order.status} />
@@ -185,12 +206,7 @@ function OrderCard({ order, onCancel, cancelling }) {
               </span>
             </span>
           </div>
-          {needsPayment(order) && (
-            <Link to={`/pay?id=${order._id.slice(-8).toUpperCase()}`} state={{ phone: order.shippingAddress?.phone }}
-              className="btn-gold block text-center py-2.5 rounded-xl text-sm font-bold">
-              Pay ₹{order.totalAmount?.toLocaleString('en-IN')} now
-            </Link>
-          )}
+
 
           {/* Courier details, once the shop adds them */}
           {(order.courier || order.trackingNumber) && order.status !== 'cancelled' && (

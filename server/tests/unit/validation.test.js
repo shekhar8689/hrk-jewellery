@@ -7,10 +7,16 @@ test('a correct Indian address passes', () => {
   expect(validateAddress({ ...good, name: "D'Souza-Rao", city: 'Navi Mumbai', state: 'Jammu & Kashmir'.replace('&', 'and') })).toBeNull()
 })
 
+test('names in Indian scripts are accepted', () => {
+  expect(validateAddress({ ...good, name: 'प्रिया शर्मा' })).toBeNull()
+  expect(validateAddress({ ...good, name: 'மீனா ராஜ்' })).toBeNull()
+})
+
 test.each([
   ['no address at all', undefined, /name/i],
   ['one-letter name', { name: 'R' }, /name/i],
   ['name with numbers', { name: 'Riya 123' }, /letters/],
+  ['name with symbols', { name: 'Riya <b>' }, /letters/],
   ['phone with 9 digits', { phone: '987654321' }, /10-digit/],
   ['phone starting with 5', { phone: '5876543210' }, /10-digit/],
   ['phone with +91', { phone: '+919876543210' }, /10-digit/],

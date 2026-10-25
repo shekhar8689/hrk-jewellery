@@ -79,6 +79,24 @@ describe('Payment page', () => {
     expect(screen.getByText(/Pay ₹1,709 by UPI/)).toBeInTheDocument()
   })
 
+  test('a 14-digit number is not silently cut to 12', async () => {
+    const calls = mockApi(order())
+    renderPay({ phone: '9876543210' })
+    const input = await screen.findByLabelText(/UPI transaction number/i)
+    await userEvent.type(input, '41234567890155')
+    expect(input).toHaveValue('41234567890155')
+    await userEvent.click(screen.getByRole('button', { name: /I have paid/i }))
+    expect(screen.getByRole('alert')).toHaveTextContent(/12 digits/)
+    expect(calls.some(c => c.url.endsWith('/upi-ref'))).toBe(false)
+  })
+
+  test('"Order placed" is not shown once the number is sent', async () => {
+    mockApi(order({ paymentStatus: 'submitted', upiRef: '412345678901' }))
+    renderPay({ phone: '9876543210', justPlaced: true })
+    expect(await screen.findByText(/We're checking your payment/)).toBeInTheDocument()
+    expect(screen.queryByText('Order placed')).not.toBeInTheDocument()
+  })
+
   test('a paid order shows "Payment received" and no QR', async () => {
     mockApi(order({ paymentStatus: 'paid', payTo: null }))
     renderPay({ phone: '9876543210' })

@@ -38,7 +38,7 @@ exports.adminGetAll = async (req, res) => {
 // ── POST /api/coupons/admin  (admin) ──────────────────────────────────────────
 exports.adminCreate = async (req, res) => {
   try {
-    const { code, type, value, minOrderAmount, maxDiscount, maxUses, expiresAt, description } = req.body
+    const { code, type, value, minOrderAmount, maxDiscount, maxUses, expiresAt, description, oncePerCustomer } = req.body
     if (!code || !type || value === undefined)
       return res.status(400).json({ message: 'Code, type, and value are required' })
     if (!['percentage', 'fixed'].includes(type))
@@ -57,6 +57,7 @@ exports.adminCreate = async (req, res) => {
       maxUses:        Number(maxUses)        || 0,
       expiresAt:      expiresAt || undefined,
       description:    String(description || '').trim(),
+      oncePerCustomer: oncePerCustomer === true || oncePerCustomer === 'true',
     })
     res.status(201).json(coupon)
   } catch (err) {
@@ -68,7 +69,7 @@ exports.adminCreate = async (req, res) => {
 // ── PUT /api/coupons/admin/:id  (admin) ───────────────────────────────────────
 exports.adminUpdate = async (req, res) => {
   try {
-    const { code, type, value, minOrderAmount, maxDiscount, maxUses, expiresAt, description, isActive } = req.body
+    const { code, type, value, minOrderAmount, maxDiscount, maxUses, expiresAt, description, isActive, oncePerCustomer } = req.body
     const coupon = await Coupon.findById(req.params.id)
     if (!coupon) return res.status(404).json({ message: 'Coupon not found' })
 
@@ -81,6 +82,7 @@ exports.adminUpdate = async (req, res) => {
     if (expiresAt  !== undefined) coupon.expiresAt      = expiresAt || undefined
     if (description!== undefined) coupon.description    = String(description).trim()
     if (isActive   !== undefined) coupon.isActive       = Boolean(isActive)
+    if (oncePerCustomer !== undefined) coupon.oncePerCustomer = oncePerCustomer === true || oncePerCustomer === 'true'
 
     await coupon.save()
     res.json(coupon)

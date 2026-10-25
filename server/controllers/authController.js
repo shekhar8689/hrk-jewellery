@@ -94,7 +94,7 @@ exports.forgotPassword = async (req, res) => {
 
     // In production wire this to Nodemailer / Resend / SendGrid
     // For now the token is returned in the response (remove in production)
-    console.log(`[DEV] Password reset link for ${email}: ${resetUrl}`)
+    if (process.env.NODE_ENV !== 'production') console.log(`[DEV] Password reset link for ${email}: ${resetUrl}`)
 
     res.json({
       message: 'If that email exists, a reset link has been sent.',
@@ -139,7 +139,7 @@ exports.register = async (req, res) => {
 
   const { name, email, password } = req.body
   try {
-    if (!/^[a-zA-Z\s\-.']+$/.test(name.trim()) || name.trim().length < 2 || name.trim().length > 60)
+    if (!/^[\p{L}\p{M}\s\-.']+$/u.test(name.trim()) || name.trim().length < 2 || name.trim().length > 60)
       return res.status(400).json({ message: 'Name must be 2–60 characters (letters, spaces, hyphens only)' })
 
     if (password.length < 8)

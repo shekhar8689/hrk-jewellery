@@ -137,6 +137,36 @@ describe('Coupons', () => {
     expect(await stockOf(p)).toBe(10)
   })
 
+  test('a "once per customer" coupon works once per phone number and once per account', async () => {
+    const p = await makeProduct({ stock: 50 })
+    await makeCoupon({ code: 'WELCOME', oncePerCustomer: true })
+    expect((await placeOrder({ product: p, couponCode: 'WELCOME', phone: '9700000001' })).status).toBe(201)
+    const again = await placeOrder({ product: p, couponCode: 'WELCOME', phone: '9700000001' })
+    expect(again.status).toBe(400)
+    expect(again.body).toEqual(expect.objectContaining({ couponError: true, message: expect.stringMatching(/already used/) }))
+    // same account, different phone
+    const a = await makeUser()
+    expect((await placeOrder({ product: p, couponCode: 'WELCOME', token: a.token })).status).toBe(201)
+    expect((await placeOrder({ product: p, couponCode: 'WELCOME', token: a.token })).status).toBe(400)
+    // a different customer is fine
+    expect((await placeOrder({ product: p, couponCode: 'WELCOME', phone: '9700000002' })).status).toBe(201)
+  })
+
+  test('a cancelled order does not count as having used a once-per-customer coupon', async () => {
+    const p = await makeProduct({ stock: 50 })
+    await makeCoupon({ code: 'HELLO', oncePerCustomer: true })
+    const first = await placeOrder({ product: p, couponCode: 'HELLO', phone: '9700000003' })
+    await api().patch(`/api/orders/${first.body._id}/status`).set('Authorization', `Bearer ${admin}`).send({ status: 'cancelled' })
+    expect((await placeOrder({ product: p, couponCode: 'HELLO', phone: '9700000003' })).status).toBe(201)
+  })
+
+  test('admin can create a once-per-customer coupon', async () => {
+    const r = await api().post('/api/coupons/admin').set('Authorization', `Bearer ${admin}`).send({ code: 'NEWBIE', type: 'fixed', value: 100, oncePerCustomer: true })
+    expect(r.body.oncePerCustomer).toBe(true)
+    const u = await api().put(`/api/coupons/admin/${r.body._id}`).set('Authorization', `Bearer ${admin}`).send({ oncePerCustomer: false })
+    expect(u.body.oncePerCustomer).toBe(false)
+  })
+
   test('public coupon check answers but never lists coupons', async () => {
     await makeCoupon({ code: 'SECRET50', value: 50 })
     expect((await api().post('/api/coupons/validate').send({ code: { $ne: null }, orderAmount: 1000 })).status).toBe(404)

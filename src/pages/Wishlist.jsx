@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Heart, ShoppingBag, Trash2, Star } from 'lucide-react'
 import { useWishlist } from '../context/WishlistContext'
 import { useCart }     from '../context/CartContext'
 import { getImageUrl } from '../utils/image'
+import { autoPick, missingChoice } from '../utils/options'
 import Toast           from '../components/Toast'
 import { useState }    from 'react'
 
@@ -24,6 +25,7 @@ export default function Wishlist() {
   const { items: cartItems, dispatch } = useCart()
   const [toast, setToast] = useState(null)
   const [movingId, setMovingId] = useState(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     document.title = `Wishlist (${items.length}) — HRK Jewellery`
@@ -47,14 +49,20 @@ export default function Wishlist() {
         throw new Error(`Only ${product.stock} in stock — already in your bag`)
       }
 
+      // Several sizes or colours: let the customer choose on the product page
+      if (missingChoice(product, autoPick(product.sizes), autoPick(product.colors))) {
+        navigate(`/product/${product._id}`)
+        return
+      }
+
       dispatch({
         type: 'ADD_ITEM',
         item: {
           ...product,
           id:            product._id,
           stock:         product.stock,
-          selectedSize:  product.sizes?.[0]  || '',
-          selectedColor: product.colors?.[0] || '',
+          selectedSize:  autoPick(product.sizes),
+          selectedColor: autoPick(product.colors),
           qty: 1,
         },
       })
@@ -122,7 +130,7 @@ export default function Wishlist() {
               <div className="flex gap-2">
                 <button onClick={() => moveToCart(item)} disabled={movingId === item._id}
                   className="flex-1 flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-amber-500 disabled:opacity-60 text-white py-2 rounded-xl text-xs font-medium transition-colors">
-                  <ShoppingBag size={13} /> {movingId === item._id ? 'Adding…' : 'Add to Cart'}
+                  <ShoppingBag size={13} /> {movingId === item._id ? 'Adding…' : missingChoice(item, autoPick(item.sizes), autoPick(item.colors)) ? 'Choose Size' : 'Add to Cart'}
                 </button>
                 <button onClick={() => removeFromWishlist(item._id)}
                   className="border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-300 px-2.5 rounded-xl transition-colors"

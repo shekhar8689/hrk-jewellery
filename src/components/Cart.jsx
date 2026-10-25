@@ -158,7 +158,7 @@ export default function Cart({ open, onClose }) {
                 Add ₹{(999 - totalPrice).toLocaleString('en-IN')} more for free shipping
               </p>
             )}
-            <p className="text-xs text-gray-400 mb-4">Taxes calculated at checkout</p>
+            <p className="text-xs text-gray-400 mb-4">All prices include taxes. Shipping is free above ₹999.</p>
 
             <button
               onClick={goCheckout}

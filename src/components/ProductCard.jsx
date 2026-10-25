@@ -1,15 +1,17 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Heart, ShoppingBag, Star } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
 import { getImageUrl } from '../utils/image'
+import { autoPick, missingChoice } from '../utils/options'
 
 export default function ProductCard({ product }) {
   const { dispatch } = useCart()
   const { isInWishlist, toggleWishlist } = useWishlist()
   const [imgIdx, setImgIdx] = useState(0)
   const [added, setAdded]   = useState(false)
+  const navigate = useNavigate()
 
   // MongoDB uses _id; static fallback data used numeric id
   const productId = product._id || product.id
@@ -22,17 +24,21 @@ export default function ProductCard({ product }) {
   const outOfStock = product.stock === 0
   const wished = isInWishlist(productId)
 
+  // Several sizes / colours: the customer chooses on the product page
+  const mustChoose = !!missingChoice(product, autoPick(product.sizes), autoPick(product.colors))
+
   const handleAdd = e => {
     e.preventDefault()
     if (outOfStock) return                       // guard: never add OOS item
+    if (mustChoose) { navigate(`/product/${productId}`); return }
     dispatch({
       type: 'ADD_ITEM',
       item: {
         ...product,
         id:            productId,               // CartContext deduplicates by "id"
         stock:         product.stock,           // required for CartContext qty cap
-        selectedSize:  product.sizes?.[0]  || '',
-        selectedColor: product.colors?.[0] || '',
+        selectedSize:  autoPick(product.sizes),
+        selectedColor: autoPick(product.colors),
       },
     })
     setAdded(true)
@@ -98,7 +104,7 @@ export default function ProductCard({ product }) {
           }`}
         >
           <ShoppingBag size={13} />
-          {outOfStock ? 'Out of Stock' : added ? 'Added to Bag' : 'Quick Add'}
+          {outOfStock ? 'Out of Stock' : added ? 'Added to Bag' : mustChoose ? 'Choose Size' : 'Quick Add'}
         </button>
 
         {/* Phones have no hover: always-visible add button */}
@@ -109,7 +115,7 @@ export default function ProductCard({ product }) {
         ) : (
           <button
             onClick={handleAdd}
-            aria-label={added ? 'Added to bag' : `Add ${product.name} to bag`}
+            aria-label={added ? 'Added to bag' : mustChoose ? `Choose a size for ${product.name}` : `Add ${product.name} to bag`}
             className={`md:hidden absolute bottom-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-colors ${
               added ? 'bg-green-700 text-white' : 'bg-white/95 text-gray-900 active:bg-gold-500 active:text-white'
             }`}

@@ -45,6 +45,7 @@ const AdminOffer = lazy(() => import('./admin/pages/OfferBanner'))
 const AdminReviews = lazy(() => import('./admin/pages/Reviews'))
 const AdminCoupons = lazy(() => import('./admin/pages/Coupons'))
 const AdminPayments = lazy(() => import('./admin/pages/Payments'))
+const AdminMessages = lazy(() => import('./admin/pages/Messages'))
 import ProtectedRoute from './admin/components/ProtectedRoute'
 
 
@@ -130,6 +131,7 @@ export default function App() {
             <Route path="/admin/reviews"   element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
             <Route path="/admin/coupons"   element={<ProtectedRoute><AdminCoupons /></ProtectedRoute>} />
             <Route path="/admin/payments"  element={<ProtectedRoute><AdminPayments /></ProtectedRoute>} />
+            <Route path="/admin/messages"  element={<ProtectedRoute><AdminMessages /></ProtectedRoute>} />
 
             {/* Everything else → public site */}
             <Route path="/*" element={<PublicSite />} />

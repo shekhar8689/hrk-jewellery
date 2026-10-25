@@ -225,6 +225,15 @@ exports.create = async (req, res) => {
       const result = couponDiscount(coupon, subtotal + shippingFee)
       if (result.error) return fail(400, { message: result.error, couponError: true })
       discount = result.discount
+
+      // "Once per customer" coupons (e.g. first order): not if this phone number
+      // or account already has a non-cancelled order with it
+      if (coupon.oncePerCustomer) {
+        const who = [{ 'shippingAddress.phone': shippingAddress.phone.trim() }]
+        if (req.user) who.push({ user: req.user._id })
+        const used = await Order.exists({ couponCode: coupon.code, status: { $ne: 'cancelled' }, $or: who }).session(session)
+        if (used) return fail(400, { message: `You have already used coupon ${coupon.code}. It can be used once per customer.`, couponError: true })
+      }
     }
 
     const total = Math.max(0, Math.round((subtotal + shippingFee - discount) * 100) / 100)

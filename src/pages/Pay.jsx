@@ -135,7 +135,7 @@ function RefForm({ order, phone, onDone, onCancelEdit }) {
       <label htmlFor="utr" className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5">UPI transaction number</label>
       <div className="flex flex-col sm:flex-row gap-2">
         <input id="utr" inputMode="numeric" autoComplete="off" value={utr} placeholder="e.g. 412345678901"
-          onChange={e => { setUtr(e.target.value.replace(/\D/g, '').slice(0, 12)); setError('') }}
+          onChange={e => { setUtr(e.target.value.replace(/\D/g, '').slice(0, 20)); setError('') }}
           className="flex-1 min-w-0 border border-gray-200 rounded-xl px-4 py-3 text-base font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-amber-400" />
         <button type="submit" disabled={sending} className="btn-gold px-6 py-3 rounded-xl text-sm font-bold disabled:opacity-60 inline-flex items-center justify-center gap-2">
           {sending && <Loader2 size={15} className="animate-spin" />} I have paid
@@ -186,7 +186,7 @@ export default function Pay() {
 
   const header = (
     <div className="text-center mb-6">
-      {justPlaced && <p className="text-sm font-medium text-green-700 mb-1 inline-flex items-center gap-1.5"><CheckCircle size={16} /> Order placed</p>}
+      {justPlaced && (!order || needsPayment(order)) && <p className="text-sm font-medium text-green-700 mb-1 inline-flex items-center gap-1.5"><CheckCircle size={16} /> Order placed</p>}
       <h1 className="font-serif text-[1.9rem] sm:text-4xl text-gray-900 font-light">
         {order && !needsPayment(order) ? 'Your Order' : 'Complete Your Payment'}
       </h1>

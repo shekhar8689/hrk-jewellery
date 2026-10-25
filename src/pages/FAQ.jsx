@@ -17,7 +17,7 @@ const FAQS = [
     items: [
       { q: 'How long does delivery take?', a: 'Orders are dispatched within 1–2 business days and delivered within 3–5 business days across India. Remote areas may take up to 7 days.' },
       { q: 'Is there a free shipping threshold?', a: 'Yes! We offer FREE shipping on all orders above ₹999. A flat shipping charge of ₹99 applies to orders below this amount.' },
-      { q: 'Can I track my order?', a: 'Absolutely! Once your order is dispatched, you can track it from the My Orders section in your account. You\'ll also receive SMS/email updates.' },
+      { q: 'Can I track my order?', a: 'Yes. Open the Track Order page (link at the bottom of every page) and enter your Order ID and mobile number. If you have an account, you can also see your orders under My Orders. Once shipped, you will see the courier name and tracking number there.' },
       { q: 'Do you deliver outside India?', a: 'Currently we only ship within India. International shipping is coming soon!' },
     ],
   },
@@ -32,9 +32,9 @@ const FAQS = [
   {
     category: 'Account & Payments',
     items: [
-      { q: 'Do I need an account to place an order?', a: 'No! You can checkout as a guest. However, creating an account lets you track orders, save addresses, and leave reviews.' },
+      { q: 'Do I need an account to place an order?', a: 'No! You can checkout as a guest. However, creating an account keeps all your orders in one place and lets you leave reviews.' },
       { q: 'What payment methods do you accept?', a: 'We accept online payment by UPI — Google Pay, PhonePe, Paytm, BHIM or any UPI app. After you place your order you get a QR code with the exact amount; on your phone you can tap to open your UPI app. Cash on Delivery is not available.' },
-      { q: 'Is my payment information secure?', a: 'Yes. All payments are encrypted using SSL technology. We do not store your card details on our servers.' },
+      { q: 'Is my payment information secure?', a: 'Yes. You pay directly from your own UPI app (Google Pay, PhonePe, Paytm, BHIM…), so we never see or store your bank or card details. Only pay to the UPI ID and name shown on our payment page.' },
       { q: 'Can I use a coupon code?', a: 'Yes! Enter your coupon code at checkout before placing your order. The discount will be applied to your order total.' },
     ],
   },

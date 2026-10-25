@@ -18,7 +18,7 @@ function validateAddress(addr) {
 
   if (name.trim().length < 2 || name.trim().length > 100)
     return 'Delivery name must be 2–100 characters'
-  if (!/^[a-zA-Z\s\-.']+$/.test(name.trim()))
+  if (!/^[\p{L}\p{M}\s\-.']+$/u.test(name.trim()))
     return 'Name must contain letters, spaces and hyphens only'
 
   if (!PHONE_RE.test(phone.trim()))
