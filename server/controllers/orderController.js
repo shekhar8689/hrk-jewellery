@@ -2,6 +2,7 @@ const Order = require('../models/Order')
 const Product = require('../models/Product')
 const Coupon = require('../models/Coupon')
 const { shippingFor, couponDiscount } = require('../utils/pricing')
+const { UTR_RE, PAY_WITHIN_HOURS, getPaymentSettings, upiReady } = require('../utils/upi')
 const mongoose = require('mongoose')
 
 const PAGE_SIZE = 15
@@ -21,6 +22,60 @@ function cleanTracking(body) {
 async function releaseCoupon(order) {
   if (!order.couponCode) return
   await Coupon.updateOne({ code: order.couponCode, usedCount: { $gt: 0 } }, { $inc: { usedCount: -1 } })
+}
+
+// Put an order's stock and coupon use back (when it is cancelled)
+async function restock(order) {
+  for (const item of order.items) {
+    if (item.product) await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } })
+  }
+  await releaseCoupon(order)
+}
+
+// Cancel UPI orders nobody paid for within PAY_WITHIN_HOURS, so their stock is
+// freed. Orders where the customer sent a transaction number are kept for the
+// admin to check. Runs at most every 10 minutes, when orders are placed or listed.
+let lastExpiry = 0
+async function expireUnpaid() {
+  if (Date.now() - lastExpiry < 10 * 60 * 1000) return
+  lastExpiry = Date.now()
+  try {
+    const cutoff = new Date(Date.now() - PAY_WITHIN_HOURS * 3600 * 1000)
+    const stale = await Order.find({ paymentMethod: 'upi', paymentStatus: { $in: ['pending', 'failed'] }, status: 'pending', createdAt: { $lt: cutoff } })
+    for (const order of stale) {
+      // Claim it first, so two servers never restock the same order twice
+      const claimed = await Order.updateOne(
+        { _id: order._id, status: 'pending', paymentStatus: { $in: ['pending', 'failed'] } },
+        { $set: { status: 'cancelled', notes: (order.notes ? order.notes + ' · ' : '') + `Cancelled automatically: not paid within ${PAY_WITHIN_HOURS} hours` },
+          $push: { statusHistory: { status: 'cancelled', at: new Date() } } }
+      )
+      if (claimed.modifiedCount) await restock(order)
+    }
+  } catch (err) {
+    console.error('Could not cancel unpaid orders:', err.message)
+  }
+}
+
+// Find an order from what the customer has: the 8-character Order ID shown
+// after ordering (or the full ID) plus the phone number used.
+async function findCustomerOrder(body, lean = true) {
+  const rawId = String(body.orderId || '').trim().replace(/^#/, '').toLowerCase()
+  const phone = String(body.phone || '').replace(/\D/g, '').slice(-10)
+  if (!/^[0-9a-f]{8}$|^[0-9a-f]{24}$/.test(rawId))
+    return { status: 400, error: 'Enter the 8-character Order ID, e.g. 94E7178C' }
+  if (!PHONE_RE.test(phone))
+    return { status: 400, error: 'Enter the 10-digit mobile number used for the order' }
+  let order
+  if (rawId.length === 24) {
+    const q = Order.findOne({ _id: rawId, 'shippingAddress.phone': phone })
+    order = await (lean ? q.lean() : q)
+  } else {
+    const q = Order.find({ 'shippingAddress.phone': phone }).sort({ createdAt: -1 }).limit(200).select('_id')
+    const hit = (await q.lean()).find(o => String(o._id).endsWith(rawId))
+    if (hit) order = await (lean ? Order.findById(hit._id).lean() : Order.findById(hit._id))
+  }
+  if (!order) return { status: 404, error: 'No order found with that Order ID and phone number' }
+  return { order }
 }
 
 // Allowed status transitions — enforces the business flow
@@ -69,9 +124,11 @@ function validateAddress(addr) {
 // ── Admin: list all orders ────────────────────────────────────────────────────
 exports.getAll = async (req, res) => {
   try {
-    const { page = 1, status, search } = req.query
+    await expireUnpaid()
+    const { page = 1, status, search, payment } = req.query
     const filter = {}
     if (status) filter.status = status
+    if (['pending', 'submitted', 'paid', 'failed'].includes(payment)) filter.paymentStatus = payment
     if (search) {
       filter.$or = [
         { 'shippingAddress.name':  { $regex: search, $options: 'i' } },
@@ -113,9 +170,13 @@ exports.create = async (req, res) => {
   // everything below is recalculated from the database.
   const { guestInfo, shippingAddress, items, totalAmount, paymentMethod, couponCode, notes } = req.body
 
-  // Only Cash on Delivery is accepted until a real payment gateway is connected
-  if (paymentMethod && paymentMethod !== 'cod')
-    return res.status(400).json({ message: 'Online payment is not available yet. Please choose Cash on Delivery.' })
+  // Orders are paid in advance by UPI — Cash on Delivery is no longer offered
+  if (paymentMethod && paymentMethod !== 'upi')
+    return res.status(400).json({ message: 'Cash on Delivery is not available. Please pay online by UPI.' })
+  const paySettings = await getPaymentSettings()
+  if (!upiReady(paySettings))
+    return res.status(503).json({ message: 'Online payment is being set up. Please try again in a little while, or contact us to order.' })
+  expireUnpaid()
 
   if (!Array.isArray(items) || items.length === 0)
     return res.status(400).json({ message: 'Order must contain at least one item' })
@@ -235,8 +296,9 @@ exports.create = async (req, res) => {
       couponCode:    coupon ? coupon.code : '',
       discount,
       totalAmount:   total,
-      paymentMethod: 'cod',
-      paymentStatus: 'pending',   // set to paid by the admin when cash is collected
+      paymentMethod: 'upi',
+      paymentStatus: 'pending',   // set to paid by the admin after checking the bank
+      payTo:         { upiId: paySettings.upiId, payeeName: paySettings.payeeName },
       statusHistory: [{ status: 'pending', at: new Date() }],
       notes: notes ? String(notes).slice(0, 500) : '',
     }
@@ -288,15 +350,12 @@ exports.updateStatus = async (req, res) => {
       })
     }
 
+    // UPI orders are packed only after the money has arrived
+    if (status === 'confirmed' && order.paymentMethod === 'upi' && order.paymentStatus !== 'paid')
+      return res.status(400).json({ message: 'Mark the payment as received before confirming this order.' })
+
     // Restore stock (and the coupon use) when admin cancels
-    if (status === 'cancelled') {
-      for (const item of order.items) {
-        if (item.product) {
-          await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } })
-        }
-      }
-      await releaseCoupon(order)
-    }
+    if (status === 'cancelled') await restock(order)
 
     order.status = status
     order.statusHistory.push({ status, at: new Date() })
@@ -330,13 +389,11 @@ exports.cancelOrder = async (req, res) => {
     if (!['pending', 'confirmed'].includes(order.status))
       return res.status(400).json({ message: `Orders with status "${order.status}" cannot be cancelled` })
 
-    // Restore stock
-    for (const item of order.items) {
-      if (item.product) {
-        await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } })
-      }
-    }
-    await releaseCoupon(order)
+    // A paid order is refunded by the shop, so customers ask instead of cancelling here
+    if (order.paymentStatus === 'paid' || order.paymentStatus === 'submitted')
+      return res.status(400).json({ message: 'This order is already paid. Please contact us to cancel it and get a refund.' })
+
+    await restock(order)
 
     order.status = 'cancelled'
     order.statusHistory.push({ status: 'cancelled', at: new Date() })
@@ -352,25 +409,24 @@ exports.cancelOrder = async (req, res) => {
 // ordering, e.g. "94E7178C", or the full ID) plus the phone number used.
 exports.track = async (req, res) => {
   try {
-    const rawId = String(req.body.orderId || '').trim().replace(/^#/, '').toLowerCase()
-    const phone = String(req.body.phone || '').replace(/\D/g, '').slice(-10)
-    if (!/^[0-9a-f]{8}$|^[0-9a-f]{24}$/.test(rawId))
-      return res.status(400).json({ message: 'Enter the 8-character Order ID, e.g. 94E7178C' })
-    if (!PHONE_RE.test(phone))
-      return res.status(400).json({ message: 'Enter the 10-digit mobile number used for the order' })
+    const found = await findCustomerOrder(req.body)
+    if (found.error) return res.status(found.status).json({ message: found.error })
+    res.json(await customerView(found.order))
+  } catch {
+    res.status(500).json({ message: 'Server error' })
+  }
+}
 
-    const NOT_FOUND = { message: 'No order found with that Order ID and phone number' }
-    let order
-    if (rawId.length === 24) {
-      order = await Order.findOne({ _id: rawId, 'shippingAddress.phone': phone }).lean()
-    } else {
-      const candidates = await Order.find({ 'shippingAddress.phone': phone }).sort({ createdAt: -1 }).limit(200).lean()
-      order = candidates.find(o => String(o._id).endsWith(rawId))
-    }
-    if (!order) return res.status(404).json(NOT_FOUND)
-
-    // Only what the customer needs — no full street address or email
-    res.json({
+// What the customer sees about their order — no full street address or email
+async function customerView(order) {
+  const awaitingPayment = order.paymentMethod === 'upi' && order.status === 'pending'
+    && ['pending', 'failed', 'submitted'].includes(order.paymentStatus)
+  let payTo = null
+  if (awaitingPayment) {
+    payTo = order.payTo?.upiId ? order.payTo : null
+    if (!payTo) { const s = await getPaymentSettings(); if (upiReady(s)) payTo = { upiId: s.upiId, payeeName: s.payeeName } }
+  }
+  return {
       orderId:        String(order._id).slice(-8).toUpperCase(),
       status:         order.status,
       placedAt:       order.createdAt,
@@ -383,6 +439,9 @@ exports.track = async (req, res) => {
       totalAmount:    order.totalAmount,
       paymentMethod:  order.paymentMethod,
       paymentStatus:  order.paymentStatus,
+      upiRef:         order.upiRef || '',
+      payTo:          payTo ? { upiId: payTo.upiId, payeeName: payTo.payeeName } : null,
+      payBy:          awaitingPayment ? new Date(new Date(order.createdAt).getTime() + PAY_WITHIN_HOURS * 3600 * 1000) : null,
       courier:        order.courier || '',
       trackingNumber: order.trackingNumber || '',
       trackingUrl:    order.trackingUrl || '',
@@ -392,7 +451,58 @@ exports.track = async (req, res) => {
         state:   order.shippingAddress?.state,
         pincode: order.shippingAddress?.pincode,
       },
-    })
+  }
+}
+
+// ── POST /api/orders/upi-ref  (public) ────────────────────────────────────────
+// After paying, the customer enters the 12-digit UPI transaction number
+// (UTR / UPI Ref No.) so the shop can match the payment in its bank app.
+exports.submitUpiRef = async (req, res) => {
+  try {
+    const utr = String(req.body.utr || '').replace(/\s/g, '')
+    if (!UTR_RE.test(utr))
+      return res.status(400).json({ message: 'Enter the 12-digit UPI transaction number (UTR / UPI Ref No.) from your payment app' })
+    const found = await findCustomerOrder(req.body, false)
+    if (found.error) return res.status(found.status).json({ message: found.error })
+    const order = found.order
+    if (order.paymentMethod !== 'upi') return res.status(400).json({ message: 'This order does not need a UPI payment' })
+    if (order.status === 'cancelled') return res.status(400).json({ message: 'This order was cancelled. Please contact us if you have already paid.' })
+    if (order.paymentStatus === 'paid') return res.status(400).json({ message: 'We have already received the payment for this order.' })
+
+    // One payment can only pay for one order
+    const usedElsewhere = await Order.exists({ upiRef: utr, _id: { $ne: order._id } })
+    if (usedElsewhere) return res.status(400).json({ message: 'This transaction number is already used for another order. Please check the number.' })
+
+    order.upiRef = utr
+    order.paymentStatus = 'submitted'
+    order.paymentSubmittedAt = new Date()
+    await order.save()
+    res.json(await customerView(order.toObject()))
+  } catch {
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+
+// ── PATCH /api/orders/:id/payment  (admin) ────────────────────────────────────
+// { received: true }  → money found in the bank: order is paid
+// { received: false } → payment not found: customer is asked to check and send the number again
+exports.updatePayment = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+    if (!order) return res.status(404).json({ message: 'Order not found' })
+    if (order.status === 'cancelled' && req.body.received !== true)
+      return res.status(400).json({ message: 'This order is cancelled' })
+    if (req.body.received === true) {
+      order.paymentStatus = 'paid'
+      order.paidAt = new Date()
+    } else if (req.body.received === false) {
+      if (order.paymentStatus === 'paid') return res.status(400).json({ message: 'This payment was already marked as received' })
+      order.paymentStatus = 'failed'
+    } else {
+      return res.status(400).json({ message: 'Say whether the payment was received' })
+    }
+    await order.save()
+    res.json(order)
   } catch {
     res.status(500).json({ message: 'Server error' })
   }

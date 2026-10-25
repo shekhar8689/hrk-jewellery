@@ -65,7 +65,7 @@ export default function ReturnPolicy() {
 
         <section>
           <h2 className="text-lg font-semibold text-gray-800 mb-3">Refund Timeline</h2>
-          <p>Once we receive and inspect the returned item, we will process your refund within <strong>5–7 business days</strong>. Refunds are issued to the original payment method. For Cash on Delivery orders, refunds are issued via bank transfer.</p>
+          <p>Once we receive and inspect the returned item, we will process your refund within <strong>5–7 business days</strong>. Refunds are sent back to the UPI account you paid from.</p>
         </section>
 
         <section>

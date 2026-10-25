@@ -86,6 +86,7 @@ app.use('/api/dashboard', require('./routes/dashboard'))
 app.use('/api/reviews',        require('./routes/reviews'))
 app.use('/api/admin/reviews',  require('./routes/adminReviews'))
 app.use('/api/coupons',        require('./routes/coupons'))
+app.use('/api/payment',        require('./routes/payment'))
 
 /* ── Health check ── */
 const { useCloudinary } = require('./config/cloudinary')

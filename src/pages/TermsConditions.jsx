@@ -27,7 +27,7 @@ export default function TermsConditions() {
 
       <Section title="Orders and Payment">
         <p>By placing an order, you confirm that all information provided is accurate. We reserve the right to cancel any order if we suspect fraudulent activity or if an item is out of stock.</p>
-        <p>Payment must be made in full before an order is processed (except for Cash on Delivery orders).</p>
+        <p>Payment must be made in full by UPI before an order is processed. Orders that are not paid within 24 hours are cancelled automatically. Cash on Delivery is not available.</p>
       </Section>
 
       <Section title="Shipping">

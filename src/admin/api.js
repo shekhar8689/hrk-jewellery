@@ -39,6 +39,11 @@ export const api = {
   getOrders: (params = {}) => req('GET', '/orders?' + new URLSearchParams(params)),
   getOrder: (id) => req('GET', `/orders/${id}`),
   updateOrderStatus: (id, status, tracking = {}) => req('PATCH', `/orders/${id}/status`, { status, ...tracking }),
+  setOrderPayment: (id, received) => req('PATCH', `/orders/${id}/payment`, { received }),
+
+  // UPI payment settings
+  getPaymentSettings: () => req('GET', '/payment/admin'),
+  updatePaymentSettings: (data) => req('PUT', '/payment', data),
 
   // Users
   getUsers: (params = {}) => req('GET', '/users?' + new URLSearchParams(params)),

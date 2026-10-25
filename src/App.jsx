@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense } from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, Link, Navigate } from 'react-router-dom'
 import { CartProvider }      from './context/CartContext'
 import { AdminAuthProvider } from './admin/context/AdminAuthContext'
 import { UserAuthProvider }  from './context/UserAuthContext'
@@ -15,7 +15,7 @@ import Home          from './pages/Home'
 const Collections = lazy(() => import('./pages/Collections'))
 const ProductDetail = lazy(() => import('./pages/ProductDetail'))
 const Checkout = lazy(() => import('./pages/Checkout'))
-const OrderSuccess = lazy(() => import('./pages/OrderSuccess'))
+const Pay = lazy(() => import('./pages/Pay'))
 const TrackOrder = lazy(() => import('./pages/TrackOrder'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
@@ -44,6 +44,7 @@ const AdminCategories = lazy(() => import('./admin/pages/Categories'))
 const AdminOffer = lazy(() => import('./admin/pages/OfferBanner'))
 const AdminReviews = lazy(() => import('./admin/pages/Reviews'))
 const AdminCoupons = lazy(() => import('./admin/pages/Coupons'))
+const AdminPayments = lazy(() => import('./admin/pages/Payments'))
 import ProtectedRoute from './admin/components/ProtectedRoute'
 
 
@@ -72,7 +73,8 @@ function PublicSite() {
             <Route path="/collections/:category" element={<Collections />} />
             <Route path="/product/:id"           element={<ProductDetail onCartOpen={() => setCartOpen(true)} />} />
             <Route path="/checkout"              element={<Checkout />} />
-            <Route path="/order-success"         element={<OrderSuccess />} />
+            <Route path="/pay"                   element={<Pay />} />
+            <Route path="/order-success"         element={<Navigate to="/track-order" replace />} />
             <Route path="/track-order"           element={<TrackOrder />} />
             <Route path="/login"                 element={<Login />} />
             <Route path="/register"              element={<Register />} />
@@ -127,6 +129,7 @@ export default function App() {
             <Route path="/admin/offer"     element={<ProtectedRoute><AdminOffer /></ProtectedRoute>} />
             <Route path="/admin/reviews"   element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
             <Route path="/admin/coupons"   element={<ProtectedRoute><AdminCoupons /></ProtectedRoute>} />
+            <Route path="/admin/payments"  element={<ProtectedRoute><AdminPayments /></ProtectedRoute>} />
 
             {/* Everything else → public site */}
             <Route path="/*" element={<PublicSite />} />

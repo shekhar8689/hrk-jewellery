@@ -20,6 +20,8 @@ function trackRateLimit(req, res, next) {
   next()
 }
 router.post('/track',       trackRateLimit,     ctrl.track)
+router.post('/upi-ref',     trackRateLimit,     ctrl.submitUpiRef)    // customer sends the UPI transaction number
+router.patch('/:id/payment', protect, adminOnly, ctrl.updatePayment)
 router.patch('/:id/status', protect, adminOnly, ctrl.updateStatus)
 router.patch('/:id/cancel', protect,          ctrl.cancelOrder)    // user cancels own order
 

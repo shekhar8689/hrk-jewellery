@@ -33,7 +33,7 @@ const FAQS = [
     category: 'Account & Payments',
     items: [
       { q: 'Do I need an account to place an order?', a: 'No! You can checkout as a guest. However, creating an account lets you track orders, save addresses, and leave reviews.' },
-      { q: 'What payment methods do you accept?', a: 'We accept Cash on Delivery (COD) and online payments including UPI, credit/debit cards, and net banking.' },
+      { q: 'What payment methods do you accept?', a: 'We accept online payment by UPI — Google Pay, PhonePe, Paytm, BHIM or any UPI app. After you place your order you get a QR code with the exact amount; on your phone you can tap to open your UPI app. Cash on Delivery is not available.' },
       { q: 'Is my payment information secure?', a: 'Yes. All payments are encrypted using SSL technology. We do not store your card details on our servers.' },
       { q: 'Can I use a coupon code?', a: 'Yes! Enter your coupon code at checkout before placing your order. The discount will be applied to your order total.' },
     ],

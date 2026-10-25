@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingBag, Truck, CheckCircle, X, ChevronRight, AlertTriangle, Tag, Loader2 } from 'lucide-react'
+import { ShoppingBag, CheckCircle, X, ChevronRight, AlertTriangle, Tag, Loader2, Smartphone } from 'lucide-react'
 import { useCart }     from '../context/CartContext'
 import { useUserAuth } from '../context/UserAuthContext'
 import { getImageUrl } from '../utils/image'
+import { rememberPhone } from '../utils/upi'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -66,8 +67,12 @@ export default function Checkout() {
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); if (fieldErrors[k]) setFieldErrors(fe => ({ ...fe, [k]: '' })) }
 
-  // Cash on Delivery only, until a real payment gateway (e.g. Razorpay) is connected
-  const paymentMethod = 'cod'
+  // Paid in advance by UPI (QR code / UPI app on the next page). No Cash on Delivery.
+  const paymentMethod = 'upi'
+  const [payReady, setPayReady] = useState(true)   // false until the shop has added its UPI ID
+  useEffect(() => {
+    fetch(`${API}/payment`, { cache: 'no-store' }).then(r => r.json()).then(d => setPayReady(!!d.ready)).catch(() => {})
+  }, [])
   const [submitting,setSubmitting]= useState(false)
   const [error,     setError]    = useState('')
 
@@ -212,8 +217,10 @@ export default function Checkout() {
     setSubmitting(true)
     try {
       const order = await placeOrder()
+      const shortId = order._id.slice(-8).toUpperCase()
+      rememberPhone(shortId, order.shippingAddress.phone)
       dispatch({ type: 'CLEAR' })
-      navigate('/order-success', { state: { order, paid: false } })
+      navigate(`/pay?id=${shortId}`, { state: { phone: order.shippingAddress.phone, justPlaced: true } })
     } catch (err) { setError(err.message) }
     finally { setSubmitting(false) }
   }
@@ -307,11 +314,11 @@ export default function Checkout() {
             <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-6">
                 <span className="w-7 h-7 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">2</span>
-                <h2 className="font-semibold text-gray-900">Payment Method</h2>
+                <h2 className="font-semibold text-gray-900">Payment</h2>
               </div>
               <div className="space-y-3">
                 {[
-                  { value: 'cod',    icon: Truck,      title: 'Cash on Delivery',         desc: 'Pay when your order arrives. No advance payment needed.' },
+                  { value: 'upi', icon: Smartphone, title: 'Pay online by UPI', desc: 'GPay, PhonePe, Paytm, BHIM or any UPI app. After placing the order you get a QR code with the exact amount.' },
                 ].map(({ value, icon: Icon, title, desc }) => (
                   <label key={value}
                     className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${
@@ -327,6 +334,11 @@ export default function Checkout() {
                     {paymentMethod === value && <CheckCircle size={18} className="ml-auto text-amber-500 shrink-0" />}
                   </label>
                 ))}
+                {!payReady && (
+                  <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                    Online payment is being set up. Please try again in a little while, or <Link to="/contact" className="underline">contact us</Link> to order.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -422,12 +434,12 @@ export default function Checkout() {
                 </div>
               </div>
 
-              <button type="submit" disabled={submitting}
+              <button type="submit" disabled={submitting || !payReady}
                 className="w-full mt-6 py-4 text-sm font-bold tracking-wide uppercase transition-colors disabled:opacity-60 btn-gold">
-                {submitting ? 'Please wait…' : `Place Order · ₹${grandTotal.toLocaleString('en-IN')}`}
+                {submitting ? 'Please wait…' : `Place Order & Pay · ₹${grandTotal.toLocaleString('en-IN')}`}
               </button>
               <p className="text-center text-xs text-gray-400 mt-3 flex items-center justify-center gap-1">
-                🔒 Safe &amp; secure checkout
+                🔒 You pay on the next step, by UPI
               </p>
             </div>
           </div>
