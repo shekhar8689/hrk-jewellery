@@ -302,8 +302,19 @@ exports.create = async (req, res) => {
     await session.commitTransaction()
     res.status(201).json(order)
   } catch (err) {
-    if (session.inTransaction()) await session.abortTransaction()
-    res.status(400).json({ message: err.message || 'Could not place order' })
+    if (session.inTransaction()) await session.abortTransaction().catch(() => {})
+    // Two orders touching the same product at the same moment: MongoDB asks us
+    // to simply try again. Nothing was saved, so it is safe to retry.
+    const transient = err?.errorLabels?.includes?.('TransientTransactionError') ||
+      err?.hasErrorLabel?.('TransientTransactionError') || err?.codeName === 'WriteConflict' || err?.code === 112
+    req._orderTries = (req._orderTries || 1) + 1
+    if (transient && req._orderTries <= 4) {
+      session.endSession()
+      await new Promise(r => setTimeout(r, 40 * req._orderTries + Math.random() * 60))
+      return exports.create(req, res)
+    }
+    console.error('Order failed:', err?.codeName || '', err?.message)
+    res.status(500).json({ message: 'Could not place your order. Please try again in a moment.' })
   } finally {
     session.endSession()
   }
