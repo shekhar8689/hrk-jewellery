@@ -9,6 +9,7 @@ jobs:
   server:
     name: API tests (unit + integration)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: server
@@ -20,12 +21,14 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
       - run: npm ci
-      # Starts a throwaway in-memory MongoDB automatically
-      - run: npm test
+      # Starts a throwaway in-memory MongoDB replica set automatically
+      - run: npm test -- --verbose --forceExit
+        timeout-minutes: 10
 
   website:
     name: Website tests + build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
