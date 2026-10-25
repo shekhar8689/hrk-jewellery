@@ -169,7 +169,11 @@ exports.create = async (req, res) => {
 
   const session = await mongoose.startSession()
   session.startTransaction()
-  const fail = async (status, body) => { await session.abortTransaction(); return res.status(status).json(body) }
+  // Stop the order: undo anything done so far (if not already undone) and answer
+  const fail = async (status, body) => {
+    if (session.inTransaction()) await session.abortTransaction().catch(() => {})
+    return res.status(status).json(body)
+  }
 
   try {
     // ── Load each product once and total its quantity across all lines ──
