@@ -22,8 +22,24 @@ jobs:
           cache-dependency-path: server/package-lock.json
       - run: npm ci
       # Starts a throwaway in-memory MongoDB replica set automatically
-      - run: npm test -- --verbose --forceExit
+      - run: npm test -- --forceExit --json --outputFile=jest-results.json
         timeout-minutes: 10
+      # Show failing tests as annotations on the pull request
+      - name: Report failures
+        if: always()
+        run: |
+          node -e '
+            const fs = require("fs")
+            if (!fs.existsSync("jest-results.json")) { console.log("::error::No test results (tests did not finish)"); process.exit(0) }
+            const r = JSON.parse(fs.readFileSync("jest-results.json", "utf8"))
+            console.log(`::notice::${r.numPassedTests} passed, ${r.numFailedTests} failed, ${r.numFailedTestSuites} failed files`)
+            let n = 0
+            for (const f of r.testResults) {
+              if (f.message && !f.assertionResults.some(a => a.status === "failed") && n < 9) { n++; console.log(`::error title=${f.name.split("/").pop()}::${f.message.replace(/\x1b\[[0-9;]*m/g, "").slice(0, 600).replace(/\n/g, "%0A")}`) }
+              for (const a of f.assertionResults) if (a.status === "failed" && n < 9) {
+                n++; console.log(`::error title=${a.fullName.slice(0, 120)}::${(a.failureMessages[0] || "").replace(/\x1b\[[0-9;]*m/g, "").slice(0, 600).replace(/\n/g, "%0A")}`)
+              }
+            }'
 
   website:
     name: Website tests + build
