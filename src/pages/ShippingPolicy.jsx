@@ -1,9 +1,10 @@
 import { RETURN_REPORT_WINDOW } from '../config/policy'
-import { SHOP } from '../config/shop'
+import useShop from '../hooks/useShop'
 import { useEffect } from 'react'
 import { Truck, Clock, MapPin, Package } from 'lucide-react'
 
 export default function ShippingPolicy() {
+  const SHOP = useShop()
   useEffect(() => { document.title = 'Shipping Policy — HRK Jewellery'; return () => { document.title = 'HRK Jewellery' } }, [])
   return (
     <main className="max-w-3xl mx-auto px-4 py-12">

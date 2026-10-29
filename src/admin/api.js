@@ -45,6 +45,10 @@ export const api = {
   getMessages: (params = {}) => req('GET', '/contact?' + new URLSearchParams(params)),
   setMessageHandled: (id, handled) => req('PATCH', `/contact/${id}`, { handled }),
 
+  // Shop contact details
+  getShop: () => req('GET', '/shop'),
+  updateShop: (data) => req('PUT', '/shop', data),
+
   // UPI payment settings
   getPaymentSettings: () => req('GET', '/payment/admin'),
   updatePaymentSettings: (data) => req('PUT', '/payment', data),

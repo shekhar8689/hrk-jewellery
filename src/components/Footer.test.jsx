@@ -9,7 +9,7 @@ test('social icons only appear for accounts that are filled in, and link to them
   render(<MemoryRouter><Footer /></MemoryRouter>)
   const links = screen.queryAllByRole('link', { name: /Instagram|Facebook|YouTube|WhatsApp/ })
   expect(links.every(a => a.getAttribute('href') && a.getAttribute('href') !== '#')).toBe(true)
-  const filled = Object.values(SHOP.social).filter(Boolean).length
+  const filled = ['instagram', 'facebook', 'youtube'].filter(k => SHOP[k]).length + 1   // + WhatsApp
   expect(links).toHaveLength(filled)
   expect(document.querySelectorAll('footer a[href="#"]')).toHaveLength(0)
 })
@@ -20,7 +20,7 @@ test('newsletter sign-up is really saved (as a message for the shop)', async () 
   await userEvent.type(screen.getByPlaceholderText(/email address/i), 'riya@test.com')
   await userEvent.click(screen.getByRole('button', { name: /Subscribe/i }))
   expect(await screen.findByText(/on the list/i)).toBeInTheDocument()
-  const [url, opts] = fetch.mock.calls[0]
+  const [url, opts] = fetch.mock.calls.find(([u]) => /\/contact$/.test(u))
   expect(url).toMatch(/\/contact$/)
   expect(JSON.parse(opts.body)).toEqual(expect.objectContaining({ email: 'riya@test.com', subject: 'Newsletter sign-up' }))
 })

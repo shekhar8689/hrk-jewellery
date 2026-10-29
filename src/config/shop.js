@@ -1,30 +1,28 @@
-/**
- * ⚠️ YOUR SHOP DETAILS — shown on the Contact, Privacy, Terms and Shipping
- * pages, in the footer and on packing slips. Edit here once.
- * (The email and phone below are placeholders: replace them.)
+/*
+ * The shop's contact details are edited in Admin → Shop Settings.
+ * These are only the defaults shown until the saved ones load (and before
+ * anything is saved).
  */
 export const SHOP = {
-  name:    'HRK Jewellery',
-  email:   'hello@hrkjewellery.com',
-  phone:   '+91 86898 14335',
-  address: 'Mumbai, Maharashtra, India',
-  hours:   'Mon–Sat, 10am–6pm IST',
-  // Shown on the Help Center
+  name:        'HRK Jewellery',
+  phone:       '+91 86898 14335',
+  whatsapp:    '918689814335',     // digits with country code
+  email:       'hello@hrkjewellery.com',
+  address:     'Mumbai, Maharashtra, India',
   supportDays: 'Monday – Saturday',
   supportTime: '10:00 AM – 6:00 PM',
-  // Full links to your accounts. Leave '' to hide that icon in the footer.
-  social: {
-    instagram: '',   // e.g. 'https://www.instagram.com/hrkjewellery'
-    facebook:  '',
-    youtube:   '',
-    whatsapp:  'https://wa.me/918689814335',
-  },
+  instagram:   '',
+  facebook:    '',
+  youtube:     '',
 }
 
-// WhatsApp chat link (uses social.whatsapp, or else the shop phone number),
-// optionally with a message already typed in for the customer
-export function whatsappLink(text = '') {
-  const digits = SHOP.phone.replace(/\D/g, '')
-  const base = SHOP.social.whatsapp || `https://wa.me/${digits.length === 10 ? '91' + digits : digits}`
+// WhatsApp chat link for the shop, optionally with a message already typed in
+export function whatsappLink(text = '', shop = SHOP) {
+  const phone = String(shop.phone || '').replace(/\D/g, '').slice(-10)
+  const digits = String(shop.whatsapp || '').replace(/\D/g, '') || (phone ? '91' + phone : '')
+  const base = `https://wa.me/${digits}`
   return text ? `${base}?text=${encodeURIComponent(text)}` : base
 }
+
+// tel: link for the shop phone
+export const telLink = (shop = SHOP) => `tel:${String(shop.phone || '').replace(/\s/g, '')}`

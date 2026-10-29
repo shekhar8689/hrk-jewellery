@@ -1,4 +1,4 @@
-import { SHOP } from '../config/shop'
+import useShop from '../hooks/useShop'
 import { useEffect } from 'react'
 
 function Section({ title, children }) {
@@ -11,6 +11,7 @@ function Section({ title, children }) {
 }
 
 export default function PrivacyPolicy() {
+  const SHOP = useShop()
   useEffect(() => { document.title = 'Privacy Policy — HRK Jewellery'; return () => { document.title = 'HRK Jewellery' } }, [])
   return (
     <main className="max-w-3xl mx-auto px-4 py-12">

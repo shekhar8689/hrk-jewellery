@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Search, X, AlertTriangle, CheckCircle, Copy, Printer } from 'lucide-react'
 import { openPackingSlip } from '../utils/packingSlip'
-import { SHOP } from '../../config/shop'
+import useShop from '../../hooks/useShop'
 import AdminLayout from '../components/AdminLayout'
 import Pagination from '../components/Pagination'
 import Toast from '../../components/Toast'
@@ -93,6 +93,7 @@ const NEXT_STATUSES = {
 
 // ── Order Detail Modal ────────────────────────────────────────────────────────
 function OrderDetail({ order, onClose, onStatusChange, onPayment }) {
+  const SHOP = useShop()
   const [status,  setStatus]  = useState(order.status)
   const [saving,  setSaving]  = useState(false)
   const [error,   setError]   = useState('')

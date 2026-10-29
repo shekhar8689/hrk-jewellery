@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom'
 import { MessageCircle, Phone, Mail, ChevronRight, Truck } from 'lucide-react'
 import Accordion from '../components/Accordion'
 import usePageTitle from '../hooks/usePageTitle'
-import { SHOP, whatsappLink } from '../config/shop'
+import useShop from '../hooks/useShop'
+import { whatsappLink, telLink } from '../config/shop'
 import { FAQS } from '../config/faqs'
 import { RETURN_REPORT_WINDOW } from '../config/policy'
 
@@ -35,6 +36,7 @@ function ContactCard({ href, icon: Icon, title, sub, external }) {
 }
 
 export default function Help() {
+  const SHOP = useShop()
   usePageTitle('Help Center')
   // The common questions here; everything else on the FAQ page
   const questions = FAQS.find(c => c.category === 'Ordering & Payment')?.items || FAQS.flatMap(c => c.items)
@@ -44,8 +46,8 @@ export default function Help() {
       <p className="text-sm text-gray-500 mb-6">Questions about an order? Have your Order ID ready.</p>
 
       <div className="space-y-3">
-        <ContactCard href={whatsappLink(`Hi ${SHOP.name}, I need help with`)} external icon={MessageCircle} title="Chat on WhatsApp" sub="Message us; we reply during support hours" />
-        <ContactCard href={`tel:${SHOP.phone.replace(/\s/g, '')}`} icon={Phone} title="Call us" sub={SHOP.phone} />
+        <ContactCard href={whatsappLink(`Hi ${SHOP.name}, I need help with`, SHOP)} external icon={MessageCircle} title="Chat on WhatsApp" sub="Message us; we reply during support hours" />
+        <ContactCard href={telLink(SHOP)} icon={Phone} title="Call us" sub={SHOP.phone} />
         <ContactCard href={`mailto:${SHOP.email}`} icon={Mail} title="Email us" sub={SHOP.email} />
         <Link to="/track-order" className="flex items-center gap-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl px-5 py-5 transition-colors">
           <span className="w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center shrink-0"><Truck size={20} /></span>

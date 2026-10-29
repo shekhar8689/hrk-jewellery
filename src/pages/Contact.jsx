@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Mail, Phone, MapPin, Clock, Send, CheckCircle, Loader2 } from 'lucide-react'
 
-import { SHOP } from '../config/shop'
+import useShop from '../hooks/useShop'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function Contact() {
+  const SHOP = useShop()
   const [form, setForm]   = useState({ name: '', email: '', phone: '', subject: '', message: '' })
   const [sent, setSent]   = useState(false)
   const [sending, setSending] = useState(false)
@@ -55,7 +56,7 @@ export default function Contact() {
               { icon: Mail,    label: 'Email',    value: SHOP.email,   href: `mailto:${SHOP.email}` },
               { icon: Phone,   label: 'Phone',    value: SHOP.phone,   href: `tel:${SHOP.phone.replace(/\s/g, '')}` },
               { icon: MapPin,  label: 'Address',  value: SHOP.address },
-              { icon: Clock,   label: 'Hours',    value: SHOP.hours },
+              { icon: Clock,   label: 'Hours',    value: `${SHOP.supportDays}, ${SHOP.supportTime}` },
             ].map(({ icon: Icon, label, value, href }) => (
               <div key={label} className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">

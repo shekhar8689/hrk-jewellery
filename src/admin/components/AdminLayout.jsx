@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../context/AdminAuthContext'
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Image,
-  Star, Tag, LogOut, Menu, X, LayoutGrid, Megaphone, IndianRupee, MessageSquare,
+  Star, Tag, LogOut, Menu, X, LayoutGrid, Megaphone, IndianRupee, MessageSquare, Settings,
 } from 'lucide-react'
 
 const NAV = [
@@ -18,6 +18,7 @@ const NAV = [
   { to: '/admin/coupons',   icon: Tag,              label: 'Coupons' },
   { to: '/admin/payments',  icon: IndianRupee,      label: 'Payments (UPI)' },
   { to: '/admin/messages',  icon: MessageSquare,    label: 'Messages' },
+  { to: '/admin/shop',      icon: Settings,         label: 'Shop Settings' },
 ]
 
 export default function AdminLayout({ children }) {
