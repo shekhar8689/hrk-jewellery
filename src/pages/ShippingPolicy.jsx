@@ -40,7 +40,7 @@ export default function ShippingPolicy() {
         </section>
         <section>
           <h2 className="text-lg font-semibold text-gray-800 mb-2">Processing Time</h2>
-          <p>Orders are processed within 1–2 business days (Monday–Saturday, excluding public holidays). You will receive an email confirmation once your order is dispatched.</p>
+          <p>Orders are processed within 1–2 business days (Monday–Saturday, excluding public holidays). Once it ships, the Track Order page shows the courier name, tracking number and a tracking link.</p>
         </section>
         <section>
           <h2 className="text-lg font-semibold text-gray-800 mb-2">Delivery Time</h2>

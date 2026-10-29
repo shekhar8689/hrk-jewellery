@@ -32,6 +32,7 @@ const TermsConditions = lazy(() => import('./pages/TermsConditions'))
 const ShippingPolicy = lazy(() => import('./pages/ShippingPolicy'))
 const ReturnPolicy = lazy(() => import('./pages/ReturnPolicy'))
 const FAQ = lazy(() => import('./pages/FAQ'))
+const Help = lazy(() => import('./pages/Help'))
 
 /* Admin pages */
 const AdminLogin = lazy(() => import('./admin/pages/AdminLogin'))
@@ -48,6 +49,7 @@ const AdminPayments = lazy(() => import('./admin/pages/Payments'))
 const AdminMessages = lazy(() => import('./admin/pages/Messages'))
 import ProtectedRoute from './admin/components/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
+import ChatButton from './components/ChatButton'
 import usePageTitle from './hooks/usePageTitle'
 
 function NotFound() {
@@ -106,6 +108,7 @@ function PublicSite() {
             <Route path="/shipping-policy" element={<ShippingPolicy />} />
             <Route path="/return-policy"   element={<ReturnPolicy />} />
             <Route path="/faq"             element={<FAQ />} />
+            <Route path="/help"            element={<Help />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
@@ -115,6 +118,7 @@ function PublicSite() {
         </div>
 
         <Footer />
+        <ChatButton />
       </div>
     </CartProvider>
   )

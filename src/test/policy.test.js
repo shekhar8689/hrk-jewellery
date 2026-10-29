@@ -14,7 +14,7 @@ test('no page promises 30-day returns or exchanges any more', () => {
 
 test('the return window is set in one place and used on the policy and FAQ pages', () => {
   expect(RETURN_REPORT_WINDOW).toBeTruthy()
-  for (const f of ['pages/ReturnPolicy.jsx', 'pages/FAQ.jsx']) {
+  for (const f of ['pages/ReturnPolicy.jsx', 'config/faqs.js']) {
     expect(fs.readFileSync(path.resolve(__dirname, '..', f), 'utf8')).toMatch(/RETURN_REPORT_WINDOW/)
   }
 })
