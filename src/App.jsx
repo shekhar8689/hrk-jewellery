@@ -51,6 +51,7 @@ const AdminShop = lazy(() => import('./admin/pages/ShopSettings'))
 import ProtectedRoute from './admin/components/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import ChatButton from './components/ChatButton'
+import Canonical from './components/Canonical'
 import usePageTitle from './hooks/usePageTitle'
 
 function NotFound() {
@@ -120,6 +121,7 @@ function PublicSite() {
 
         <Footer />
         <ChatButton />
+        <Canonical />
       </div>
     </CartProvider>
   )

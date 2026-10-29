@@ -46,8 +46,7 @@ describe('Payment page', () => {
     const calls = mockApi(order())
     renderPay({ phone: '9876543210' })
     const input = await screen.findByLabelText(/UPI transaction number/i)
-    await userEvent.type(input, '12345abc678')
-    expect(input).toHaveValue('12345678')     // letters are ignored
+    await userEvent.type(input, '12345678')
     await userEvent.click(screen.getByRole('button', { name: /I have paid/i }))
     expect(screen.getByRole('alert')).toHaveTextContent(/12 digits/)
     expect(calls.some(c => c.url.endsWith('/upi-ref'))).toBe(false)
@@ -88,6 +87,24 @@ describe('Payment page', () => {
     await userEvent.click(screen.getByRole('button', { name: /I have paid/i }))
     expect(screen.getByRole('alert')).toHaveTextContent(/12 digits/)
     expect(calls.some(c => c.url.endsWith('/upi-ref'))).toBe(false)
+  })
+
+  test("pasting PhonePe's own Transaction ID explains which number to use", async () => {
+    const calls = mockApi(order())
+    renderPay({ phone: '9876543210' })
+    await userEvent.type(await screen.findByLabelText(/UPI transaction number/i), 'T2410301234567890123456')
+    await userEvent.click(screen.getByRole('button', { name: /I have paid/i }))
+    expect(screen.getByRole('alert')).toHaveTextContent(/PhonePe.*UTR/)
+    expect(calls.some(c => c.url.endsWith('/upi-ref'))).toBe(false)
+  })
+
+  test('a number pasted with spaces is sent as 12 digits', async () => {
+    const calls = mockApi(order())
+    renderPay({ phone: '9876543210' })
+    await userEvent.type(await screen.findByLabelText(/UPI transaction number/i), '4123 4567 8901')
+    await userEvent.click(screen.getByRole('button', { name: /I have paid/i }))
+    await screen.findByText(/We're checking your payment/)
+    expect(calls.find(c => c.url.endsWith('/upi-ref')).body.utr).toBe('412345678901')
   })
 
   test('"Order placed" is not shown once the number is sent', async () => {
