@@ -16,7 +16,7 @@ test('the message is really sent to the shop', async () => {
   await userEvent.type(screen.getByLabelText(/Message/), 'Where is my order 94E7178C?')
   await userEvent.click(screen.getByRole('button', { name: /Send Message/ }))
   expect(await screen.findByText(/Message Sent/)).toBeInTheDocument()
-  const [url, opts] = fetch.mock.calls[0]
+  const [url, opts] = fetch.mock.calls.find(([u]) => /\/contact$/.test(u))
   expect(url).toMatch(/\/contact$/)
   expect(JSON.parse(opts.body)).toEqual(expect.objectContaining({ name: 'Riya Shah', phone: '9876543210', message: 'Where is my order 94E7178C?' }))
 })
@@ -38,7 +38,7 @@ test('needs an email or a mobile number to reply to', async () => {
   await userEvent.type(screen.getByLabelText(/Message/), 'Where is my order 94E7178C?')
   await userEvent.click(screen.getByRole('button', { name: /Send Message/ }))
   expect(screen.getByText(/email or mobile number/i)).toBeInTheDocument()
-  expect(fetch).not.toHaveBeenCalled()
+  expect(fetch.mock.calls.some(([u]) => /\/contact$/.test(u))).toBe(false)
 })
 
 test('phone and email are tappable links', () => {

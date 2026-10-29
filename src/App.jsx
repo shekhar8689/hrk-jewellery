@@ -47,6 +47,7 @@ const AdminReviews = lazy(() => import('./admin/pages/Reviews'))
 const AdminCoupons = lazy(() => import('./admin/pages/Coupons'))
 const AdminPayments = lazy(() => import('./admin/pages/Payments'))
 const AdminMessages = lazy(() => import('./admin/pages/Messages'))
+const AdminShop = lazy(() => import('./admin/pages/ShopSettings'))
 import ProtectedRoute from './admin/components/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import ChatButton from './components/ChatButton'
@@ -146,6 +147,7 @@ export default function App() {
             <Route path="/admin/coupons"   element={<ProtectedRoute><AdminCoupons /></ProtectedRoute>} />
             <Route path="/admin/payments"  element={<ProtectedRoute><AdminPayments /></ProtectedRoute>} />
             <Route path="/admin/messages"  element={<ProtectedRoute><AdminMessages /></ProtectedRoute>} />
+            <Route path="/admin/shop"      element={<ProtectedRoute><AdminShop /></ProtectedRoute>} />
 
             {/* Everything else → public site */}
             <Route path="/*" element={<PublicSite />} />

@@ -1,15 +1,15 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Instagram, Facebook, Youtube, MessageCircle } from 'lucide-react'
-import { SHOP } from '../config/shop'
+import useShop from '../hooks/useShop'
+import { whatsappLink } from '../config/shop'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const SOCIAL = [
   { key: 'instagram', label: 'Instagram', Icon: Instagram },
   { key: 'facebook',  label: 'Facebook',  Icon: Facebook },
   { key: 'youtube',   label: 'YouTube',   Icon: Youtube },
-  { key: 'whatsapp',  label: 'WhatsApp',  Icon: MessageCircle },
-].filter(s => SHOP.social?.[s.key])
+]
 
 const links = {
   'Shop': [
@@ -38,6 +38,12 @@ const links = {
 }
 
 export default function Footer() {
+  // Social links from Admin → Shop Settings; WhatsApp always (the shop number)
+  const SHOP = useShop()
+  const social = [
+    ...SOCIAL.filter(x => SHOP[x.key]).map(x => ({ ...x, href: SHOP[x.key] })),
+    { key: 'whatsapp', label: 'WhatsApp', Icon: MessageCircle, href: whatsappLink('', SHOP) },
+  ]
   const [email,      setEmail]      = useState('')
   const [subscribed, setSubscribed] = useState(false)
 
@@ -95,10 +101,10 @@ export default function Footer() {
             <p className="text-sm text-gray-500 mt-4 max-w-xs leading-relaxed">
               Fine jewellery for the modern woman. Tarnish-free, water-resistant, and thoughtfully crafted to last a lifetime.
             </p>
-            {SOCIAL.length > 0 && (
+            {social.length > 0 && (
               <div className="flex gap-3 mt-5 md:mt-6">
-                {SOCIAL.map(({ key, label, Icon }) => (
-                  <a key={key} href={SHOP.social[key]} target="_blank" rel="noopener noreferrer" aria-label={label}
+                {social.map(({ key, label, Icon, href }) => (
+                  <a key={key} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
                     className="w-10 h-10 md:w-8 md:h-8 border border-white/10 flex items-center justify-center text-gray-500 hover:text-gold-400 hover:border-gold-500 transition-all">
                     <Icon size={15} />
                   </a>
