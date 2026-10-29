@@ -14,7 +14,7 @@ const links = {
   'Help': [
     { label: 'Track Order',       to: '/track-order' },
     { label: 'My Orders',         to: '/my-orders' },
-    { label: 'Returns & Exchange', to: '/return-policy' },
+    { label: 'Returns & Refunds', to: '/return-policy' },
     { label: 'Shipping Info',     to: '/shipping-policy' },
     { label: 'FAQs',              to: '/faq' },
     { label: 'Contact Us',        to: '/contact' },

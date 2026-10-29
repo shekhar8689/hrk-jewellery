@@ -13,6 +13,7 @@ import { useUserAuth } from '../context/UserAuthContext'
 import { useWishlist } from '../context/WishlistContext'
 import { getImageUrl, getVideoUrl, getVideoPoster } from '../utils/image'
 import { autoPick, missingChoice } from '../utils/options'
+import { RETURN_REPORT_WINDOW } from '../config/policy'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -482,7 +483,7 @@ export default function ProductDetail({ onCartOpen }) {
   const accordionItems = [
     { key: 'description', title: 'Description',       content: product.description },
     { key: 'details',     title: 'Product Details',   content: `Material: ${product.material || 'N/A'}\nFinish: Polished\nCare: Wipe with a soft cloth, avoid water & chemicals` },
-    { key: 'shipping',    title: 'Shipping & Returns', content: 'Free shipping on orders above ₹999. Delivered in 3–5 business days. 30-day hassle-free returns.' },
+    { key: 'shipping',    title: 'Shipping & Returns', content: `Free shipping on orders above ₹999. Delivered in 3–5 business days. Damaged or wrong item? Tell us within ${RETURN_REPORT_WINDOW} of delivery for a replacement or refund.` },
   ]
 
   const images = product.images || []
@@ -677,7 +678,7 @@ export default function ProductDetail({ onCartOpen }) {
             {[
               { icon: Shield,    text: 'Secure Payment' },
               { icon: Truck,     text: 'Free Shipping' },
-              { icon: RefreshCw, text: '30-Day Returns' },
+              { icon: RefreshCw, text: 'Damage Protection' },
             ].map(({ icon: Icon, text }) => (
               <div key={text} className="flex flex-col items-center gap-1 text-center">
                 <Icon size={18} className="text-gold-500" />

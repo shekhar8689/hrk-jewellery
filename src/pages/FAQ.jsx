@@ -1,3 +1,4 @@
+import { RETURN_REPORT_WINDOW } from '../config/policy'
 import { useState, useEffect } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -24,9 +25,9 @@ const FAQS = [
   {
     category: 'Returns & Refunds',
     items: [
-      { q: 'What is your return policy?', a: 'We offer a 30-day return window for eligible items. Items must be in original, unworn condition with all tags and packaging intact.' },
-      { q: 'How do I initiate a return?', a: 'Email us at hello@hrkjewellery.com with your order number, photos of the item, and reason for return. We\'ll get back to you within 1–2 business days.' },
-      { q: 'When will I receive my refund?', a: 'Refunds are processed within 5–7 business days after we receive and inspect the returned item. They\'re credited to your original payment method.' },
+      { q: 'What is your return policy?', a: `We don't accept returns for change of mind. If your order arrives damaged, defective or wrong, tell us within ${RETURN_REPORT_WINDOW} of delivery and we will replace it or refund you.` },
+      { q: 'How do I initiate a return?', a: `Send us a message on the Contact page within ${RETURN_REPORT_WINDOW} of delivery, with your Order ID and photos of the item and packaging. We reply within 1–2 business days.` },
+      { q: 'When will I receive my refund?', a: 'Refunds are processed within 5–7 business days after we receive and inspect the returned item. They\'re sent back to the UPI account you paid from.' },
     ],
   },
   {

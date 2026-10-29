@@ -10,7 +10,7 @@ const pick = (req, field, urlField) => {
 }
 
 // Fields that must never be copied straight from the form
-const strip = ({ imageUrl, videoUrl, removeImage, _id, __v, createdAt, updatedAt, ...rest }) => rest
+const strip = ({ imageUrl, videoUrl, mobileImageUrl, removeImage, removeMobileImage, mobileImage, _id, __v, createdAt, updatedAt, ...rest }) => rest
 
 exports.getAll = async (_req, res) => {
   try {
@@ -41,7 +41,8 @@ exports.create = async (req, res) => {
     if (mediaType === 'video' && !video)
       return res.status(400).json({ message: 'Video required (upload a video or paste a video URL)' })
 
-    const banner = await Banner.create({ ...strip(req.body), mediaType, image, video })
+    const mobileImage = pick(req, 'mobileImage', 'mobileImageUrl') || ''
+    const banner = await Banner.create({ ...strip(req.body), mediaType, image, video, mobileImage })
     res.status(201).json(banner)
   } catch (err) {
     res.status(400).json({ message: err.message })
@@ -63,6 +64,9 @@ exports.update = async (req, res) => {
     if (newImage) banner.image = newImage
     else if (req.body.removeImage === 'true' && mediaType === 'video') banner.image = ''
     if (newVideo) banner.video = newVideo
+    const newMobile = pick(req, 'mobileImage', 'mobileImageUrl')
+    if (newMobile) banner.mobileImage = newMobile
+    else if (req.body.removeMobileImage === 'true') banner.mobileImage = ''
 
     Object.assign(banner, updates, { mediaType })
     if (mediaType === 'image' && !banner.image)

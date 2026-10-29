@@ -5,17 +5,46 @@ import { getImageUrl, getVideoUrl, getVideoPoster } from '../utils/image'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
+// Banners from the last visit, so they show instantly while the server answers
+const CACHE_KEY = 'hrk_banners'
+const readCache = () => { try { const v = JSON.parse(localStorage.getItem(CACHE_KEY)); return Array.isArray(v) ? v : [] } catch { return [] } }
+const writeCache = v => { try { localStorage.setItem(CACHE_KEY, JSON.stringify(v)) } catch { /* private mode */ } }
+
+// Which part of a wide photo to keep when a tall phone screen cuts its sides
+const FOCUS = { left: 'left center', right: 'right center', top: 'center top', bottom: 'center bottom', center: 'center center' }
+const focusOf = s => FOCUS[s.focus] || FOCUS.center
+
+// The slide photo: a separate tall photo on phones when the admin added one
+function SlideImage({ s, eager }) {
+  return (
+    <picture>
+      {s.mobileImage && <source media="(max-width: 767px)" srcSet={getImageUrl(s.mobileImage, 900)} />}
+      <img
+        src={getImageUrl(s.image, 1920)}
+        alt={s.title}
+        className="w-full h-full object-cover"
+        style={{ objectPosition: focusOf(s) }}
+        loading={eager ? 'eager' : 'lazy'}
+        fetchpriority={eager ? 'high' : 'low'}
+        decoding="async"
+      />
+    </picture>
+  )
+}
+
 export default function Hero() {
-  const [banners, setBanners] = useState([])
+  const [banners, setBanners] = useState(readCache)
   const [current, setCurrent] = useState(0)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch(`${API}/banners/active`)
       .then(res => res.json())
-      .then(data => setBanners(Array.isArray(data) ? data : []))
+      .then(data => {
+        if (!Array.isArray(data)) return
+        setBanners(data); writeCache(data)
+        setCurrent(c => (c < data.length ? c : 0))
+      })
       .catch(err => console.error('Hero fetch error:', err))
-      .finally(() => setLoading(false))
   }, [])
 
   // Auto-advance only when there are multiple banners.
@@ -41,15 +70,7 @@ export default function Hero() {
     touchX.current = null
   }
 
-  if (loading) {
-    return (
-      <section className="relative h-[70svh] min-h-[460px] md:h-[88vh] bg-gray-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-      </section>
-    )
-  }
-
-  // Fallback when no banners are configured yet
+  // Shown at once while banners load (and when none are set up), instead of a spinner
   if (banners.length === 0) {
     return (
       <section className="relative h-[70svh] min-h-[460px] md:h-[88vh] bg-gray-900 flex flex-col items-center justify-center gap-6 px-6 text-center">
@@ -88,6 +109,7 @@ export default function Hero() {
                 src={getVideoUrl(s.video)}
                 poster={s.image ? getImageUrl(s.image, 1920) : getVideoPoster(s.video, 1920) || undefined}
                 className="w-full h-full object-cover"
+                style={{ objectPosition: focusOf(s) }}
                 autoPlay
                 muted
                 playsInline
@@ -109,14 +131,7 @@ export default function Hero() {
               <div className="w-full h-full bg-gray-900" />
             )
           ) : (
-            <img
-              src={getImageUrl(s.image, 1920)}
-              alt={s.title}
-              className="w-full h-full object-cover"
-              loading={i === 0 ? 'eager' : 'lazy'}
-              fetchpriority={i === 0 ? 'high' : 'low'}
-              decoding="async"
-            />
+            <SlideImage s={s} eager={i === 0} />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/10 md:bg-gradient-to-r md:from-black/60 md:via-black/30 md:to-black/20" />
         </div>

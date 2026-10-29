@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import useCachedJson from '../hooks/useCachedJson'
 import { Link } from 'react-router-dom'
 import { Star, Shield, RefreshCw, Truck, Smartphone } from 'lucide-react'
 import Hero from '../components/Hero'
@@ -7,14 +7,12 @@ import ProductCard from '../components/ProductCard'
 import useOffer, { offerBannerVisible } from '../hooks/useOffer'
 import { getImageUrl } from '../utils/image'
 
-// API base URL from environment variable
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 // Static brand promise strip — no DB needed for these
 const PROMISES = [
   { icon: Shield,    title: 'Fine Craftsmanship', desc: '18K gold-plated, tarnish-free' },
   { icon: Truck,     title: 'Free Shipping',       desc: 'On orders above ₹999' },
-  { icon: RefreshCw, title: '30-Day Returns',      desc: 'Hassle-free exchange policy' },
+  { icon: RefreshCw, title: 'Damage Protection',   desc: 'Replaced or refunded if it arrives damaged' },
   { icon: Smartphone, title: 'Easy UPI Payment',   desc: 'GPay, PhonePe, Paytm & more' },
 ]
 
@@ -34,31 +32,15 @@ function ProductSkeleton() {
 }
 
 export default function Home() {
-  const [bestsellers, setBestsellers] = useState([])
-  const [newArrivals, setNewArrivals]  = useState([])
-  const [loading, setLoading]          = useState(true)
-  const [reviews, setReviews]          = useState([])   // real, admin-approved reviews
+  // Shown instantly from the last visit, then refreshed (see useCachedJson)
+  const bsData  = useCachedJson('/products?visible=true&isBestseller=true&limit=4', { products: [] })
+  const naData  = useCachedJson('/products?visible=true&isNew=true&limit=4', { products: [] })
+  const revData = useCachedJson('/reviews/featured?limit=6', [])   // real, admin-approved reviews
+  const bestsellers = bsData?.products || []
+  const newArrivals = naData?.products || []
+  const reviews     = Array.isArray(revData) ? revData : []
+  const loading     = bsData === undefined || naData === undefined
   const offer = useOffer()                               // Admin → Offer Banner
-
-  useEffect(() => {
-    // Fetch bestsellers and new arrivals in parallel
-    Promise.all([
-      fetch(`${API}/products?visible=true&isBestseller=true&limit=4`).then(r => r.json()),
-      fetch(`${API}/products?visible=true&isNew=true&limit=4`).then(r => r.json()),
-    ])
-      .then(([bsData, naData]) => {
-        setBestsellers(bsData.products || [])
-        setNewArrivals(naData.products || [])
-      })
-      .catch(err => console.error('Home fetch error:', err))
-      .finally(() => setLoading(false))
-
-    // Customer reviews approved in Admin → Reviews (4–5 stars, newest first)
-    fetch(`${API}/reviews/featured?limit=6`)
-      .then(r => (r.ok ? r.json() : []))
-      .then(data => setReviews(Array.isArray(data) ? data : []))
-      .catch(() => setReviews([]))
-  }, [])
 
   return (
     <main>
