@@ -1,15 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Mail, Phone, MapPin, Clock, Send, CheckCircle, Loader2 } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import { SHOP } from '../config/shop'
 
-// ⚠️ Shop contact details shown on this page — replace with the real ones
-export const SHOP = {
-  email:   'hello@hrkjewellery.com',
-  phone:   '+91 98765 43210',
-  address: 'Mumbai, Maharashtra, India',
-  hours:   'Mon–Sat, 10am–6pm IST',
-}
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

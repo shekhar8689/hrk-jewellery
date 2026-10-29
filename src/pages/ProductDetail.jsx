@@ -452,7 +452,7 @@ export default function ProductDetail({ onCartOpen }) {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-10">
+      <div className="max-w-7xl mx-auto px-4 py-10 min-h-[100svh]">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="animate-pulse bg-gray-200 aspect-[3/4] rounded-lg" />
           <div className="space-y-4 pt-4">

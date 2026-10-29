@@ -1,3 +1,4 @@
+import { SHOP } from '../config/shop'
 import { useEffect } from 'react'
 
 function Section({ title, children }) {
@@ -14,7 +15,7 @@ export default function PrivacyPolicy() {
   return (
     <main className="max-w-3xl mx-auto px-4 py-12">
       <h1 className="font-serif text-3xl text-gray-800 mb-2">Privacy Policy</h1>
-      <p className="text-xs text-gray-400 mb-10">Last updated: January 2025</p>
+      <p className="text-xs text-gray-400 mb-10">Last updated: October 2026</p>
 
       <Section title="Information We Collect">
         <p>We collect information you provide directly to us when you create an account, place an order, or contact us. This includes your name, email address, shipping address, and phone number.</p>
@@ -39,7 +40,7 @@ export default function PrivacyPolicy() {
       </Section>
 
       <Section title="Your Rights">
-        <p>You have the right to access, correct, or delete your personal information. You may also opt out of marketing communications at any time. To exercise these rights, contact us at <strong>hello@hrkjewellery.com</strong>.</p>
+        <p>You have the right to access, correct, or delete your personal information. You may also opt out of marketing communications at any time. To exercise these rights, contact us at <a href={`mailto:${SHOP.email}`} className="font-semibold underline">{SHOP.email}</a>.</p>
       </Section>
 
       <Section title="Changes to This Policy">
@@ -47,7 +48,7 @@ export default function PrivacyPolicy() {
       </Section>
 
       <Section title="Contact Us">
-        <p>If you have questions about this Privacy Policy, please contact us at <strong>hello@hrkjewellery.com</strong>.</p>
+        <p>If you have questions about this Privacy Policy, please contact us at <a href={`mailto:${SHOP.email}`} className="font-semibold underline">{SHOP.email}</a>.</p>
       </Section>
     </main>
   )

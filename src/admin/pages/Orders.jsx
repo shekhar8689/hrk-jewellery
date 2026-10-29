@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Search, X, AlertTriangle, CheckCircle, Copy } from 'lucide-react'
+import { Search, X, AlertTriangle, CheckCircle, Copy, Printer } from 'lucide-react'
+import { openPackingSlip } from '../utils/packingSlip'
+import { SHOP } from '../../config/shop'
 import AdminLayout from '../components/AdminLayout'
 import Pagination from '../components/Pagination'
 import Toast from '../../components/Toast'
@@ -134,6 +136,10 @@ function OrderDetail({ order, onClose, onStatusChange, onPayment }) {
             <h2 className="text-lg font-semibold">Order Details</h2>
             <p className="text-xs text-gray-400 mt-0.5">#{order._id?.slice(-8).toUpperCase()}</p>
           </div>
+          <button type="button" onClick={() => openPackingSlip(order, { shopName: SHOP.name, shopPhone: SHOP.phone, shopAddress: SHOP.address })}
+            className="ml-auto mr-3 inline-flex items-center gap-1.5 text-xs font-medium border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50">
+            <Printer size={14} /> Packing slip
+          </button>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X size={20} />
           </button>
@@ -301,7 +307,7 @@ export default function Orders() {
   const [data,         setData]         = useState({ orders: [], total: 0, pages: 1, page: 1 })
   const [loading,      setLoading]      = useState(true)
   const [search,       setSearch]       = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
   const [paymentFilter, setPaymentFilter] = useState(searchParams.get('payment') || '')
   const [selected,     setSelected]     = useState(null)
   const [page,         setPage]         = useState(1)

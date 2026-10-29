@@ -86,6 +86,22 @@ export default function Collections() {
     : category                ? (CATEGORIES.find(c => c.id === category)?.label ?? category)
     : 'All Jewellery'
 
+  const unknownCategory = !!category && !CATEGORIES.some(c => c.id === category)
+  useEffect(() => {
+    document.title = `${unknownCategory ? 'Category not found' : pageTitle} — HRK Jewellery`
+    return () => { document.title = 'HRK Jewellery' }
+  }, [pageTitle, unknownCategory])
+
+  if (unknownCategory) {
+    return (
+      <main className="max-w-xl mx-auto px-4 py-20 text-center min-h-[60vh]">
+        <h1 className="font-serif text-3xl text-gray-800 mb-3">Category not found</h1>
+        <p className="text-gray-500 mb-6">We couldn't find that collection. Have a look at everything we have instead.</p>
+        <Link to="/collections" className="btn-gold">Browse All Jewellery</Link>
+      </main>
+    )
+  }
+
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-10">
       {/* Breadcrumb */}
