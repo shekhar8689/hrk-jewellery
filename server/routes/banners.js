@@ -6,6 +6,7 @@ const { mediaUpload } = require('../config/cloudinary')
 const bannerFiles = mediaUpload([
   { name: 'image', maxCount: 1, kind: 'image' },
   { name: 'video', maxCount: 1, kind: 'video' },
+  { name: 'mobileImage', maxCount: 1, kind: 'image' },
 ])
 
 router.get('/', ctrl.getAll)

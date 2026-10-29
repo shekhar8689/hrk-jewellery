@@ -8,8 +8,8 @@ import { getImageUrl, getVideoUrl, getVideoPoster } from '../../utils/image'
 function BannerModal({ banner, onClose, onSave }) {
   const [form, setForm] = useState(
     banner
-      ? { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: 0, mediaType: 'image', ...banner }
-      : { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: 0, mediaType: 'image' }
+      ? { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: 0, mediaType: 'image', focus: 'center', ...banner }
+      : { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: 0, mediaType: 'image', focus: 'center' }
   )
   const [file, setFile]       = useState(null)
   const [preview, setPreview] = useState(banner?.image ? getImageUrl(banner.image) : '')
@@ -24,6 +24,17 @@ function BannerModal({ banner, onClose, onSave }) {
   const [videoPreview, setVideoPreview] = useState(banner?.video ? getVideoUrl(banner.video) : '')
   const [useVideoUrl, setUseVideoUrl]   = useState(false)
   const [removeCover, setRemoveCover]   = useState(false)
+  // Optional separate tall photo for phones
+  const [mobileFile, setMobileFile]       = useState(null)
+  const [mobilePreview, setMobilePreview] = useState(banner?.mobileImage ? getImageUrl(banner.mobileImage, 600) : '')
+  const [removeMobile, setRemoveMobile]   = useState(false)
+  const mobileRef = useRef()
+  const onMobileFile = e => {
+    const f = e.target.files[0]
+    if (!f) return
+    if (f.size > 5 * 1024 * 1024) return setError('Phone photo must be 5 MB or smaller.')
+    setError(''); setMobileFile(f); setMobilePreview(URL.createObjectURL(f)); setRemoveMobile(false)
+  }
   const videoRef = useRef()
 
   const onVideoFile = e => {
@@ -73,12 +84,14 @@ function BannerModal({ banner, onClose, onSave }) {
       const fd = new FormData()
       // Append the editable form fields (stored image/video paths are handled by the server)
       Object.entries(form).forEach(([k, v]) => {
-        if (['image', 'video', '_id', '__v', 'createdAt', 'updatedAt'].includes(k)) return
+        if (['image', 'video', 'mobileImage', '_id', '__v', 'createdAt', 'updatedAt'].includes(k)) return
         fd.append(k, v ?? '')
       })
       if (file) fd.append('image', file)
       if (isVideo && videoFile) fd.append('video', videoFile)
       if (isVideo && removeCover && !file && !form.imageUrl) fd.append('removeImage', 'true')
+      if (mobileFile) fd.append('mobileImage', mobileFile)
+      else if (removeMobile) fd.append('removeMobileImage', 'true')
       await onSave(fd)
       onClose()
     } catch (err) {
@@ -227,6 +240,54 @@ function BannerModal({ banner, onClose, onSave }) {
                 )}
               </p>
             )}
+          </div>
+
+
+          {/* How it looks on phones */}
+          <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-3">
+            <div>
+              <p className="text-sm font-medium text-gray-700">How it looks on phones</p>
+              <p className="text-xs text-gray-500">Phones are tall and laptops are wide, so a wide photo gets its sides cut off on phones. Choose which part to keep, or add a separate tall photo for phones.</p>
+            </div>
+            <div className="flex gap-4 items-start">
+              <div className="shrink-0 text-center">
+                <div className="w-[72px] h-[128px] rounded-lg overflow-hidden bg-gray-200 border border-gray-300">
+                  {(mobilePreview && !removeMobile) ? <img src={mobilePreview} alt="Phone preview" className="w-full h-full object-cover" />
+                    : preview ? <img src={preview} alt="Phone preview" className="w-full h-full object-cover" style={{ objectPosition: { left: 'left center', right: 'right center', top: 'center top', bottom: 'center bottom' }[form.focus] || 'center' }} />
+                    : null}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Phone</p>
+              </div>
+              <div className="flex-1 space-y-3 min-w-0">
+                <label className="block">
+                  <span className="block text-xs font-medium text-gray-600 mb-1">Keep this part of the photo</span>
+                  <select value={form.focus || 'center'} onChange={e => set('focus', e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    <option value="center">Middle</option>
+                    <option value="left">Left side</option>
+                    <option value="right">Right side</option>
+                    <option value="top">Top</option>
+                    <option value="bottom">Bottom</option>
+                  </select>
+                </label>
+                {!isVideo && (
+                  <div>
+                    <span className="block text-xs font-medium text-gray-600 mb-1">Separate photo for phones (optional)</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button type="button" onClick={() => mobileRef.current?.click()}
+                        className="text-xs border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-white inline-flex items-center gap-1.5">
+                        <Upload size={13} /> {mobilePreview && !removeMobile ? 'Change phone photo' : 'Upload phone photo'}
+                      </button>
+                      {mobilePreview && !removeMobile && (
+                        <button type="button" onClick={() => { setRemoveMobile(true); setMobileFile(null) }} className="text-xs text-red-500 hover:underline">Remove</button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1">Best size: 1080 × 1920 (tall). Phones then show this photo instead.</p>
+                    <input ref={mobileRef} type="file" accept="image/*" className="hidden" onChange={onMobileFile} />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Title */}
@@ -457,7 +518,7 @@ export default function Banners() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 mt-2">
-                      Button: "{banner.cta || 'Shop Now'}" · Align: {banner.align || 'left'} · Link: {banner.link} · Order: {banner.order}
+                      Button: "{banner.cta || 'Shop Now'}" · Align: {banner.align || 'left'} · Link: {banner.link} · Order: {banner.order}{banner.mobileImage ? ' · Has phone photo' : ''}
                     </p>
                   </div>
 

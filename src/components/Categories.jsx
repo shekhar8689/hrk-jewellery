@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
+import useCachedJson from '../hooks/useCachedJson'
 import { Link } from 'react-router-dom'
 import { getImageUrl } from '../utils/image'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 // Tailwind needs full class names, so map the number of tiles to a desktop grid
 const DESKTOP_COLS = { 1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4', 5: 'md:grid-cols-5' }
@@ -13,14 +12,9 @@ const DESKTOP_COLS = { 1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-col
  * photo of one of its products instead.
  */
 export default function Categories() {
-  const [categories, setCategories] = useState(null)   // null = loading
-
-  useEffect(() => {
-    fetch(`${API}/categories`)
-      .then(r => (r.ok ? r.json() : []))
-      .then(data => setCategories(Array.isArray(data) ? data : []))
-      .catch(() => setCategories([]))
-  }, [])
+  // Shown instantly from the last visit, then refreshed; null while loading
+  const data = useCachedJson('/categories', [])
+  const categories = data === undefined ? null : Array.isArray(data) ? data : []
 
   // Nothing to show (all hidden, or the server is unreachable)
   if (categories && categories.length === 0) return null

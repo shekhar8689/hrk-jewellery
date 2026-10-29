@@ -37,7 +37,7 @@ export default function About() {
             { icon: Heart,  title: 'Passion',     desc: 'Every piece is made with love and attention to detail.' },
             { icon: Award,  title: 'Quality',     desc: 'Tarnish-free, water-resistant materials that last.' },
             { icon: Leaf,   title: 'Sustainable', desc: 'Responsibly sourced materials and ethical production.' },
-            { icon: Shield, title: 'Trust',       desc: '30-day returns and transparent pricing, always.' },
+            { icon: Shield, title: 'Trust',       desc: 'Transparent pricing, and we make it right if anything arrives damaged.' },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="bg-white rounded-2xl p-6 text-center border border-gray-100 hover:shadow-md transition-shadow">
               <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
