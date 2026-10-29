@@ -14,6 +14,7 @@ import { useWishlist } from '../context/WishlistContext'
 import { getImageUrl, getVideoUrl, getVideoPoster } from '../utils/image'
 import { autoPick, missingChoice } from '../utils/options'
 import { RETURN_REPORT_WINDOW } from '../config/policy'
+import { applySeo, productJsonLd } from '../utils/seo'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -402,10 +403,15 @@ export default function ProductDetail({ onCartOpen }) {
       .finally(() => setLoading(false))
   }, [id])
 
-  // Dynamic page title
+  // Dynamic page title + details for Google (description, price, stock)
   useEffect(() => {
-    if (product) document.title = `${product.name} — HRK Jewellery`
-    return () => { document.title = 'HRK Jewellery' }
+    if (!product) return
+    document.title = `${product.name} — HRK Jewellery`
+    const undo = applySeo({
+      description: `${product.name} — ₹${Number(product.price).toLocaleString('en-IN')}. ${product.description || ''}`,
+      jsonLd: productJsonLd(product, window.location.origin),
+    })
+    return () => { document.title = 'HRK Jewellery'; undo() }
   }, [product])
 
   const wished      = product ? isInWishlist(product._id) : false

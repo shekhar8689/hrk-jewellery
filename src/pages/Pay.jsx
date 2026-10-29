@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { CheckCircle, Copy, Smartphone, Clock, AlertTriangle, Download, Loader2, ShieldCheck, Truck, QrCode } from 'lucide-react'
+import { checkUtr } from '../utils/utr'
 import { upiLink, UPI_APPS, isPhone, isIOS, orderNote, rememberPhone, recallPhone, needsPayment } from '../utils/upi'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
@@ -109,12 +110,13 @@ function RefForm({ order, phone, onDone, onCancelEdit }) {
 
   const submit = async e => {
     e.preventDefault(); setError('')
-    if (!/^[0-9]{12}$/.test(utr)) return setError('The UPI transaction number has 12 digits. Please check it in your payment app.')
+    const checked = checkUtr(utr)
+    if (checked.error) return setError(checked.error)
     setSending(true)
     try {
       const res = await fetch(`${API}/orders/upi-ref`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order.orderId, phone, utr }),
+        body: JSON.stringify({ orderId: order.orderId, phone, utr: checked.utr }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Could not send. Please try again.')
@@ -129,13 +131,19 @@ function RefForm({ order, phone, onDone, onCancelEdit }) {
         <span className="w-7 h-7 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">2</span>
         <h2 className="font-semibold text-gray-900">After paying, enter the transaction number</h2>
       </div>
-      <p className="text-sm text-gray-500 mb-4">
-        Open the payment in your UPI app and find the 12-digit number called <strong>UPI Ref No.</strong>, <strong>UTR</strong> or <strong>UPI Transaction ID</strong>.
+      <p className="text-sm text-gray-500 mb-3">
+        Open the payment in your UPI app (History → this payment) and copy the <strong>12-digit number</strong>. It is the same number your bank and ours show.
       </p>
+      <ul className="text-xs text-gray-600 bg-gray-50 rounded-xl px-4 py-3 mb-4 space-y-1">
+        <li><strong>Google Pay:</strong> "UPI transaction ID" (not the Google transaction ID)</li>
+        <li><strong>PhonePe:</strong> "UTR" (not the Transaction ID starting with T)</li>
+        <li><strong>Paytm:</strong> "UPI Ref No."</li>
+        <li><strong>BHIM / bank apps:</strong> "UPI Ref No." or "RRN"</li>
+      </ul>
       <label htmlFor="utr" className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5">UPI transaction number</label>
       <div className="flex flex-col sm:flex-row gap-2">
-        <input id="utr" inputMode="numeric" autoComplete="off" value={utr} placeholder="e.g. 412345678901"
-          onChange={e => { setUtr(e.target.value.replace(/\D/g, '').slice(0, 20)); setError('') }}
+        <input id="utr" inputMode="numeric" autoComplete="off" value={utr} placeholder="12 digits, e.g. 412345678901" maxLength={40}
+          onChange={e => { setUtr(e.target.value); setError('') }}
           className="flex-1 min-w-0 border border-gray-200 rounded-xl px-4 py-3 text-base font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-amber-400" />
         <button type="submit" disabled={sending} className="btn-gold px-6 py-3 rounded-xl text-sm font-bold disabled:opacity-60 inline-flex items-center justify-center gap-2">
           {sending && <Loader2 size={15} className="animate-spin" />} I have paid

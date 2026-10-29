@@ -94,6 +94,12 @@ app.use('/api/payment',        require('./routes/payment'))
 app.use('/api/contact',        require('./routes/contact'))
 app.use('/api/shop',           require('./routes/shop'))
 
+/* ── For Google: sitemap with every product, and robots.txt (the website
+ *    forwards /sitemap.xml and /robots.txt here, see vercel.json) ── */
+const seo = require('./controllers/seoController')
+app.get('/sitemap.xml', seo.sitemap)
+app.get('/robots.txt', seo.robots)
+
 /* ── Health check ── */
 const { useCloudinary } = require('./config/cloudinary')
 if (!useCloudinary) {

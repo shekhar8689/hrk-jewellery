@@ -1,9 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /admin
-Disallow: /checkout
-Disallow: /pay
-Disallow: /my-orders
-Disallow: /reset-password
-
-Sitemap: https://hrk-jewellery.vercel.app/sitemap.xml

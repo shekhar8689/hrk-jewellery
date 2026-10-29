@@ -4,17 +4,16 @@ import path from 'path'
 const root = path.resolve(__dirname, '../..')
 const read = f => fs.readFileSync(path.join(root, f), 'utf8')
 
-test('robots.txt keeps search engines out of admin, checkout and payment pages and points to the sitemap', () => {
-  const r = read('public/robots.txt')
-  for (const p of ['/admin', '/checkout', '/pay', '/my-orders']) expect(r).toContain(`Disallow: ${p}`)
-  expect(r).toMatch(/^Sitemap: https:\/\/.+\/sitemap\.xml$/m)
-})
-
-test('sitemap lists the main shop pages', () => {
-  const s = read('public/sitemap.xml')
-  expect(s).toContain('<urlset')
-  expect((s.match(/<loc>/g) || []).length).toBeGreaterThanOrEqual(10)
-  expect(s).not.toContain('/admin')
+test('sitemap.xml and robots.txt come from the server (every product listed, domain from FRONTEND_URL)', () => {
+  const v = JSON.parse(read('vercel.json'))
+  const r = Object.fromEntries(v.rewrites.map(x => [x.source, x.destination]))
+  expect(r['/sitemap.xml']).toMatch(/^https:\/\/.+\/sitemap\.xml$/)
+  expect(r['/robots.txt']).toMatch(/^https:\/\/.+\/robots\.txt$/)
+  // they must come before the catch-all that sends everything to the app
+  expect(v.rewrites.findIndex(x => x.source === '/sitemap.xml')).toBeLessThan(v.rewrites.findIndex(x => x.source === '/(.*)'))
+  // a file in public/ would win over the rewrite and go stale
+  expect(fs.existsSync(path.join(root, 'public/sitemap.xml'))).toBe(false)
+  expect(fs.existsSync(path.join(root, 'public/robots.txt'))).toBe(false)
 })
 
 test('sharing a link shows a preview card', () => {
