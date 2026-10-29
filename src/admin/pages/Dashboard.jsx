@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingBag, Package, Users, IndianRupee, Clock, CheckCircle, Truck, Star } from 'lucide-react'
+import { ShoppingBag, Package, Users, IndianRupee, Clock, CheckCircle, Truck, Star, AlertTriangle, MessageSquare, PartyPopper } from 'lucide-react'
 import AdminLayout from '../components/AdminLayout'
 import { api } from '../api'
 
@@ -23,6 +23,54 @@ const StatCard = ({ icon: Icon, label, value, color, to }) => (
     </div>
   </Link>
 )
+
+// What needs doing today
+function TodoPanel({ todo }) {
+  if (!todo) return null
+  const items = [
+    todo.paymentsToCheck > 0 && { to: '/admin/orders?payment=submitted', icon: IndianRupee, cls: 'bg-orange-50 border-orange-200 text-orange-800',
+      text: `${todo.paymentsToCheck} payment${todo.paymentsToCheck > 1 ? 's' : ''} to check`, hint: 'Find the transaction number in your bank / UPI app, then mark received' },
+    todo.paidToConfirm > 0 && { to: '/admin/orders?payment=paid&status=pending', icon: Package, cls: 'bg-blue-50 border-blue-200 text-blue-800',
+      text: `${todo.paidToConfirm} paid order${todo.paidToConfirm > 1 ? 's' : ''} to confirm & pack`, hint: 'Confirm, pack, then ship with the courier details' },
+    todo.messages > 0 && { to: '/admin/messages', icon: MessageSquare, cls: 'bg-purple-50 border-purple-200 text-purple-800',
+      text: `${todo.messages} message${todo.messages > 1 ? 's' : ''} to reply to`, hint: 'From the Contact page' },
+  ].filter(Boolean)
+  const low = todo.lowStock || []
+  const nothing = items.length === 0 && low.length === 0
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <h2 className="font-semibold text-gray-900 mb-3">To do today</h2>
+      {nothing ? (
+        <p className="text-sm text-green-700 flex items-center gap-2"><PartyPopper size={16} /> All caught up — nothing waiting for you.</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map(({ to, icon: Icon, cls, text, hint }) => (
+            <Link key={to} to={to} className={`flex items-center gap-3 border rounded-lg px-4 py-3 hover:shadow-sm ${cls}`}>
+              <Icon size={18} className="shrink-0" />
+              <span className="flex-1 min-w-0"><span className="font-semibold">{text}</span><span className="block text-xs opacity-80">{hint}</span></span>
+              <span aria-hidden="true">→</span>
+            </Link>
+          ))}
+          {low.length > 0 && (
+            <div className="border border-red-200 bg-red-50 rounded-lg px-4 py-3">
+              <p className="text-sm font-semibold text-red-800 flex items-center gap-2"><AlertTriangle size={16} /> Low stock — add more in Products</p>
+              <ul className="mt-2 text-sm text-red-900 space-y-1">
+                {low.map(p => (
+                  <li key={p._id} className="flex justify-between gap-3">
+                    <Link to="/admin/products" className="hover:underline truncate">{p.name}</Link>
+                    <span className="shrink-0 font-medium">{p.stock === 0 ? 'Sold out' : `${p.stock} left`}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+      {todo.unpaid > 0 && <p className="text-xs text-gray-500 mt-3">{todo.unpaid} order{todo.unpaid > 1 ? 's are' : ' is'} waiting for the customer to pay (cancelled automatically after 24 hours).</p>}
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
@@ -53,6 +101,8 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-500 text-sm mt-1">Overview of your store</p>
         </div>
+
+        <TodoPanel todo={stats?.todo} />
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={ShoppingBag} label="Total Orders" value={stats?.totalOrders || 0} color="bg-blue-500" to="/admin/orders" />

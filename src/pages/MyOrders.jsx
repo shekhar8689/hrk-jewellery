@@ -1,3 +1,4 @@
+import usePageTitle from '../hooks/usePageTitle'
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Package, Truck, Home, Clock, X, ShoppingBag, RefreshCw } from 'lucide-react'
@@ -228,6 +229,7 @@ function OrderCard({ order, onCancel, cancelling }) {
 }
 
 export default function MyOrders() {
+  usePageTitle('My Orders')
   const { user, getToken, loading: authLoading } = useUserAuth()
   const navigate = useNavigate()
 

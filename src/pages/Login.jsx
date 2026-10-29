@@ -1,9 +1,11 @@
+import usePageTitle from '../hooks/usePageTitle'
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 import { useUserAuth } from '../context/UserAuthContext'
 
 export default function Login() {
+  usePageTitle('Sign In')
   const { login }  = useUserAuth()
   const navigate   = useNavigate()
   const location   = useLocation()

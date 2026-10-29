@@ -1,3 +1,4 @@
+import { SHOP } from '../config/shop'
 import { useEffect } from 'react'
 
 function Section({ title, children }) {
@@ -14,7 +15,7 @@ export default function TermsConditions() {
   return (
     <main className="max-w-3xl mx-auto px-4 py-12">
       <h1 className="font-serif text-3xl text-gray-800 mb-2">Terms &amp; Conditions</h1>
-      <p className="text-xs text-gray-400 mb-10">Last updated: January 2025</p>
+      <p className="text-xs text-gray-400 mb-10">Last updated: October 2026</p>
 
       <Section title="Acceptance of Terms">
         <p>By accessing and using the HRK Jewellery website, you accept and agree to be bound by these Terms and Conditions. If you do not agree, please do not use our website.</p>
@@ -52,7 +53,7 @@ export default function TermsConditions() {
       </Section>
 
       <Section title="Contact">
-        <p>For questions about these Terms, contact us at <strong>hello@hrkjewellery.com</strong>.</p>
+        <p>For questions about these Terms, contact us at <a href={`mailto:${SHOP.email}`} className="font-semibold underline">{SHOP.email}</a>.</p>
       </Section>
     </main>
   )

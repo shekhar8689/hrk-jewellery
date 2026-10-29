@@ -1,3 +1,4 @@
+import usePageTitle from '../hooks/usePageTitle'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User, Mail, Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react'
@@ -22,6 +23,7 @@ function validate(form) {
 }
 
 export default function Register() {
+  usePageTitle('Create Account')
   const { register } = useUserAuth()
   const navigate     = useNavigate()
 

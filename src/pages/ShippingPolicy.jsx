@@ -1,3 +1,5 @@
+import { RETURN_REPORT_WINDOW } from '../config/policy'
+import { SHOP } from '../config/shop'
 import { useEffect } from 'react'
 import { Truck, Clock, MapPin, Package } from 'lucide-react'
 
@@ -6,7 +8,7 @@ export default function ShippingPolicy() {
   return (
     <main className="max-w-3xl mx-auto px-4 py-12">
       <h1 className="font-serif text-3xl text-gray-800 mb-2">Shipping Policy</h1>
-      <p className="text-xs text-gray-400 mb-10">Last updated: January 2025</p>
+      <p className="text-xs text-gray-400 mb-10">Last updated: October 2026</p>
 
       {/* Quick reference cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
@@ -50,7 +52,7 @@ export default function ShippingPolicy() {
         </section>
         <section>
           <h2 className="text-lg font-semibold text-gray-800 mb-2">Damaged or Missing Items</h2>
-          <p>If your order arrives damaged or with missing items, please contact us at <strong>hello@hrkjewellery.com</strong> within 48 hours of delivery with photos. We will resolve the issue promptly.</p>
+          <p>If your order arrives damaged or with missing items, please contact us at <a href={`mailto:${SHOP.email}`} className="font-semibold underline">{SHOP.email}</a> within {RETURN_REPORT_WINDOW} of delivery with photos. We will resolve the issue promptly.</p>
         </section>
       </div>
     </main>

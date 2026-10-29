@@ -47,11 +47,24 @@ const AdminCoupons = lazy(() => import('./admin/pages/Coupons'))
 const AdminPayments = lazy(() => import('./admin/pages/Payments'))
 const AdminMessages = lazy(() => import('./admin/pages/Messages'))
 import ProtectedRoute from './admin/components/ProtectedRoute'
+import ErrorBoundary from './components/ErrorBoundary'
+import usePageTitle from './hooks/usePageTitle'
+
+function NotFound() {
+  usePageTitle('Page not found')
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+      <h1 className="font-serif text-6xl text-gray-200">404</h1>
+      <p className="text-gray-500 text-lg">Page not found</p>
+      <Link to="/" className="btn-gold">Go Home</Link>
+    </div>
+  )
+}
 
 
 /* Shown for a moment while a page's code downloads */
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-[50vh]">
+  <div className="flex items-center justify-center min-h-[100svh]">
     <div className="w-8 h-8 border-2 border-gray-200 border-t-amber-500 rounded-full animate-spin" />
   </div>
 )
@@ -67,6 +80,7 @@ function PublicSite() {
         <Cart open={cartOpen} onClose={() => setCartOpen(false)} />
 
         <div className="flex-1">
+          <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/"                      element={<Home />} />
@@ -94,15 +108,10 @@ function PublicSite() {
             <Route path="/faq"             element={<FAQ />} />
 
             {/* 404 */}
-            <Route path="*" element={
-              <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
-                <h1 className="font-serif text-6xl text-gray-200">404</h1>
-                <p className="text-gray-500 text-lg">Page not found</p>
-                <Link to="/" className="btn-gold">Go Home</Link>
-              </div>
-            } />
+            <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </ErrorBoundary>
         </div>
 
         <Footer />
@@ -117,6 +126,7 @@ export default function App() {
     <UserAuthProvider>
       <WishlistProvider>
         <AdminAuthProvider>
+          <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Admin routes */}
@@ -137,6 +147,7 @@ export default function App() {
             <Route path="/*" element={<PublicSite />} />
           </Routes>
           </Suspense>
+          </ErrorBoundary>
         </AdminAuthProvider>
       </WishlistProvider>
     </UserAuthProvider>

@@ -1,6 +1,15 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Instagram, Facebook, Youtube, Twitter } from 'lucide-react'
+import { Instagram, Facebook, Youtube, MessageCircle } from 'lucide-react'
+import { SHOP } from '../config/shop'
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const SOCIAL = [
+  { key: 'instagram', label: 'Instagram', Icon: Instagram },
+  { key: 'facebook',  label: 'Facebook',  Icon: Facebook },
+  { key: 'youtube',   label: 'YouTube',   Icon: Youtube },
+  { key: 'whatsapp',  label: 'WhatsApp',  Icon: MessageCircle },
+].filter(s => SHOP.social?.[s.key])
 
 const links = {
   'Shop': [
@@ -31,9 +40,20 @@ export default function Footer() {
   const [email,      setEmail]      = useState('')
   const [subscribed, setSubscribed] = useState(false)
 
-  const handleSubscribe = e => {
+  const [subError, setSubError] = useState('')
+  // Sign-ups arrive in Admin → Messages
+  const handleSubscribe = async e => {
     e.preventDefault()
-    if (email) { setSubscribed(true); setEmail('') }
+    if (!email) return
+    setSubError('')
+    try {
+      const res = await fetch(`${API}/contact`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Newsletter', email, subject: 'Newsletter sign-up', message: `Please add ${email} to the newsletter.` }),
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Could not sign you up. Please try again.')
+      setSubscribed(true); setEmail('')
+    } catch (err) { setSubError(err.message) }
   }
 
   return (
@@ -59,6 +79,7 @@ export default function Footer() {
               </button>
             </form>
           )}
+          {subError && <p role="alert" className="text-sm text-red-400 mt-3">{subError}</p>}
         </div>
       </div>
 
@@ -73,14 +94,16 @@ export default function Footer() {
             <p className="text-sm text-gray-500 mt-4 max-w-xs leading-relaxed">
               Fine jewellery for the modern woman. Tarnish-free, water-resistant, and thoughtfully crafted to last a lifetime.
             </p>
-            <div className="flex gap-3 mt-5 md:mt-6">
-              {[Instagram, Facebook, Youtube, Twitter].map((Icon, i) => (
-                <a key={i} href="#" aria-label="Social media"
-                  className="w-10 h-10 md:w-8 md:h-8 border border-white/10 flex items-center justify-center text-gray-500 hover:text-gold-400 hover:border-gold-500 transition-all">
-                  <Icon size={15} />
-                </a>
-              ))}
-            </div>
+            {SOCIAL.length > 0 && (
+              <div className="flex gap-3 mt-5 md:mt-6">
+                {SOCIAL.map(({ key, label, Icon }) => (
+                  <a key={key} href={SHOP.social[key]} target="_blank" rel="noopener noreferrer" aria-label={label}
+                    className="w-10 h-10 md:w-8 md:h-8 border border-white/10 flex items-center justify-center text-gray-500 hover:text-gold-400 hover:border-gold-500 transition-all">
+                    <Icon size={15} />
+                  </a>
+                ))}
+              </div>
+            )}
             <div className="mt-6 flex flex-wrap gap-2">
               {['🇮🇳 Made in India', '💧 Water Resistant', '✨ Tarnish-Free'].map(tag => (
                 <span key={tag} className="text-[9px] text-gray-500 border border-white/10 px-2.5 py-1.5 tracking-wide">{tag}</span>

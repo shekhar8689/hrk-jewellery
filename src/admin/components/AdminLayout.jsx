@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../context/AdminAuthContext'
 import {
@@ -21,6 +21,14 @@ const NAV = [
 ]
 
 export default function AdminLayout({ children }) {
+  // Admin pages: own tab title, and never listed by search engines
+  useEffect(() => {
+    document.title = 'Admin — HRK Jewellery'
+    let meta = document.querySelector('meta[name="robots"]')
+    if (!meta) { meta = document.createElement('meta'); meta.name = 'robots'; document.head.appendChild(meta) }
+    meta.content = 'noindex, nofollow'
+    return () => { meta.content = 'index, follow'; document.title = 'HRK Jewellery' }
+  }, [])
   const { admin, logout } = useAdminAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
