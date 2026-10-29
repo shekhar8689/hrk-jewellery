@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Search, X, AlertTriangle, CheckCircle, Copy, Printer } from 'lucide-react'
-import { openPackingSlip } from '../utils/packingSlip'
+import { openPackingSlip, slipsHtml, writeTab } from '../utils/packingSlip'
 import useShop from '../../hooks/useShop'
 import AdminLayout from '../components/AdminLayout'
 import Pagination from '../components/Pagination'
@@ -137,9 +137,9 @@ function OrderDetail({ order, onClose, onStatusChange, onPayment }) {
             <h2 className="text-lg font-semibold">Order Details</h2>
             <p className="text-xs text-gray-400 mt-0.5">#{order._id?.slice(-8).toUpperCase()}</p>
           </div>
-          <button type="button" onClick={() => openPackingSlip(order, { shopName: SHOP.name, shopPhone: SHOP.phone, shopAddress: SHOP.address })}
+          <button type="button" onClick={() => openPackingSlip(order, { shopName: SHOP.name, shopPhone: SHOP.phone, shopAddress: SHOP.address, shopEmail: SHOP.email })}
             className="ml-auto mr-3 inline-flex items-center gap-1.5 text-xs font-medium border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50">
-            <Printer size={14} /> Packing slip
+            <Printer size={14} /> Print label &amp; bill
           </button>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X size={20} />
@@ -302,7 +302,33 @@ function OrderDetail({ order, onClose, onStatusChange, onPayment }) {
 // ── Orders Page ───────────────────────────────────────────────────────────────
 const STATUS_LIST = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
 
+// Every paid, confirmed order (ready to pack and ship), across all pages
+async function loadReadyToShip() {
+  const all = []
+  for (let page = 1; page <= 20; page++) {
+    const res = await api.getOrders({ status: 'confirmed', payment: 'paid', page })
+    all.push(...res.orders)
+    if (page >= res.pages) break
+  }
+  return all
+}
+
 export default function Orders() {
+  const SHOP = useShop()
+  const [printing, setPrinting] = useState(false)
+  const printReady = async () => {
+    // open the tab straight away on the click, so the browser doesn't block it
+    const w = window.open('', '_blank')
+    if (!w) return setToast({ message: 'Your browser blocked the print tab. Allow pop-ups for this site and try again.', type: 'error' })
+    w.document.write('<p style="font-family:Arial;padding:24px">Loading orders…</p>')
+    setPrinting(true)
+    try {
+      const orders = await loadReadyToShip()
+      if (!orders.length) { w.close(); return setToast({ message: 'No paid, confirmed orders waiting to ship', type: 'success' }) }
+      writeTab(w, slipsHtml(orders, { shopName: SHOP.name, shopPhone: SHOP.phone, shopAddress: SHOP.address, shopEmail: SHOP.email }))
+    } catch (e) { w.close(); setToast({ message: e.message, type: 'error' }) }
+    finally { setPrinting(false) }
+  }
   const [searchParams] = useSearchParams()
 
   const [data,         setData]         = useState({ orders: [], total: 0, pages: 1, page: 1 })
@@ -357,9 +383,15 @@ export default function Orders() {
   return (
     <AdminLayout>
       <div className="space-y-5">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
-          <p className="text-sm text-gray-500">{data.total} orders total</p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
+            <p className="text-sm text-gray-500">{data.total} orders total</p>
+          </div>
+          <button type="button" onClick={printReady} disabled={printing}
+            className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2.5 rounded-lg disabled:opacity-60">
+            <Printer size={16} /> {printing ? 'Preparing…' : 'Print labels & bills (ready to ship)'}
+          </button>
         </div>
 
         {/* Filters */}
