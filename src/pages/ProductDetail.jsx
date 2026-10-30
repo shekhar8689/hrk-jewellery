@@ -15,6 +15,7 @@ import { getImageUrl, getVideoUrl, getVideoPoster } from '../utils/image'
 import { autoPick, missingChoice } from '../utils/options'
 import { RETURN_REPORT_WINDOW } from '../config/policy'
 import { applySeo, productJsonLd } from '../utils/seo'
+import { trackProduct } from '../utils/track'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -406,6 +407,7 @@ export default function ProductDetail({ onCartOpen }) {
   // Dynamic page title + details for Google (description, price, stock)
   useEffect(() => {
     if (!product) return
+    trackProduct(product._id, 'view')
     document.title = `${product.name} — HRK Jewellery`
     const undo = applySeo({
       description: `${product.name} — ₹${Number(product.price).toLocaleString('en-IN')}. ${product.description || ''}`,
@@ -439,6 +441,7 @@ export default function ProductDetail({ onCartOpen }) {
       type: 'ADD_ITEM',
       item: { ...product, id: product._id, stock: product.stock, selectedSize, selectedColor, qty },
     })
+    trackProduct(product._id, 'cart')
     setAdded(true)
     setTimeout(() => { setAdded(false); onCartOpen?.() }, 800)
   }

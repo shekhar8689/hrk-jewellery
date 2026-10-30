@@ -24,7 +24,10 @@ describe('size and colour must be chosen', () => {
 })
 
 describe('the last piece is sold only once', () => {
-  test('8 people ordering the last bracelet at the same moment: one gets it, stock never goes below 0', async () => {
+  // Needs a real MongoDB (GitHub runs one). The local FerretDB stand-in can't do
+  // one-step conditional updates, so there this check would be meaningless.
+  const realMongo = process.env.TEST_NO_TRANSACTIONS ? test.skip : test
+  realMongo('8 people ordering the last bracelet at the same moment: one gets it, stock never goes below 0', async () => {
     const p = await makeProduct({ stock: 1 })
     const rs = await Promise.all(Array.from({ length: 8 }, () => placeOrder({ product: p })))
     expect(rs.filter(r => r.status === 201)).toHaveLength(1)

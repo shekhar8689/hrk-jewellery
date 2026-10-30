@@ -5,6 +5,7 @@ import { useWishlist } from '../context/WishlistContext'
 import { useCart }     from '../context/CartContext'
 import { getImageUrl } from '../utils/image'
 import { autoPick, missingChoice } from '../utils/options'
+import { trackProduct } from '../utils/track'
 import Toast           from '../components/Toast'
 import { useState }    from 'react'
 
@@ -66,6 +67,7 @@ export default function Wishlist() {
           qty: 1,
         },
       })
+      trackProduct(product._id, 'cart')
       removeFromWishlist(item._id)
       setToast({ message: `${product.name} added to cart`, type: 'success' })
     } catch (err) {

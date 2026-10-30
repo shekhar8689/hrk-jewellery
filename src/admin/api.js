@@ -26,6 +26,7 @@ export const api = {
 
   // Dashboard
   stats: () => req('GET', '/dashboard/stats'),
+  popular: (days = 30) => req('GET', `/dashboard/popular?days=${days}`),
 
   // Products
   getProducts: (params = {}) => req('GET', '/products?' + new URLSearchParams(params)),
