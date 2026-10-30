@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Mail, ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react'
 
+import useShop from '../hooks/useShop'
+import { whatsappLink } from '../config/shop'
+
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 export default function ForgotPassword() {
+  const SHOP = useShop()
   const [email,     setEmail]     = useState('')
   const [loading,   setLoading]   = useState(false)
   const [sent,      setSent]      = useState(false)
@@ -53,6 +57,12 @@ export default function ForgotPassword() {
               <h2 className="text-lg font-semibold text-gray-900 mb-2">Check your inbox</h2>
               <p className="text-sm text-gray-500 mb-6">
                 If <strong>{email}</strong> is registered, a password reset link has been sent. Check your spam folder if you don't see it.
+              </p>
+              <p className="text-sm text-gray-500 mb-6">
+                No email after 5 minutes?{' '}
+                <a href={whatsappLink(`Hi ${SHOP.name}, I can't reset my password. My account email is ${email}`, SHOP)} target="_blank" rel="noopener noreferrer"
+                  className="text-green-700 font-medium hover:underline">Message us on WhatsApp</a>{' '}
+                and we'll send you a reset link.
               </p>
 
               {/* Dev-mode helper — remove in production */}

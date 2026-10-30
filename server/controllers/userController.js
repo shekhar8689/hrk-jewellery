@@ -47,3 +47,18 @@ exports.toggleActive = async (req, res) => {
     res.status(500).json({ message: 'Server error' })
   }
 }
+
+// ── POST /api/users/:id/reset-link  (admin) ───────────────────────────────────
+// A one-hour password reset link the admin can send the customer (e.g. on
+// WhatsApp) when the reset email doesn't arrive.
+exports.resetLink = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+    if (!user) return res.status(404).json({ message: 'Customer not found' })
+    if (user.role === 'admin') return res.status(400).json({ message: 'The admin password is changed on Render (ADMIN_PASSWORD), not here' })
+    const link = await require('./authController').makeResetLink(user)
+    res.json({ link, expiresInMinutes: 60, phone: user.phone || '' })
+  } catch {
+    res.status(404).json({ message: 'Customer not found' })
+  }
+}

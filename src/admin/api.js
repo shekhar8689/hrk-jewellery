@@ -57,6 +57,7 @@ export const api = {
   getUsers: (params = {}) => req('GET', '/users?' + new URLSearchParams(params)),
   getUser: (id) => req('GET', `/users/${id}`),
   toggleUser: (id) => req('PATCH', `/users/${id}/toggle`),
+  userResetLink: (id) => req('POST', `/users/${id}/reset-link`),
 
   // Banners
   getBanners: () => req('GET', '/banners'),
