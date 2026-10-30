@@ -16,7 +16,7 @@ test('sends a test email to the admin and says so', async () => {
 })
 
 test.each([
-  [{}, null, /BREVO_API_KEY.*EMAIL_FROM.*Render/],
+  [{}, null, /Render.*RESEND_API_KEY.*EMAIL_FROM/],
   [{ BREVO_API_KEY: 'xsmtpsib-abc', EMAIL_FROM: 'HRK <hrk@gmail.com>' }, null, /SMTP key.*xkeysib-/],
   [{ BREVO_API_KEY: 'xkeysib-bad', EMAIL_FROM: 'HRK <hrk@gmail.com>' }, [401, { code: 'unauthorized', message: 'Key not found' }], /rejected the API key/],
   [{ BREVO_API_KEY: 'xkeysib-ok', EMAIL_FROM: 'HRK <hrk@gmail.com>' }, [400, { code: 'invalid_parameter', message: 'Sender is not valid' }], /verified.*Senders/i],
