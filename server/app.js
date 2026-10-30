@@ -18,6 +18,7 @@ if (!fs.existsSync(uploadsDir)) {
 const { trustProxySetting } = require('./utils/config')
 
 const app = express()
+app.disable("x-powered-by")   // don't tell visitors which server software runs
 
 // Render runs the app behind one proxy: trust it so req.ip is the visitor's
 // address (needed for the per-visitor limits). Elsewhere X-Forwarded-For is
@@ -38,7 +39,7 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(normalizeOrigin(origin))) return cb(null, true)
     // Allow this project's Vercel preview deployments
     if (/^https:\/\/hrk-jewellery[a-z0-9-]*\.vercel\.app$/.test(origin)) return cb(null, true)
-    cb(new Error('Not allowed by CORS'))
+    cb(Object.assign(new Error('This website is not allowed to use the HRK API'), { status: 403 }))
   },
   // No cookies are used (sign-in is a token sent in a header), so other sites
   // never get to send credentials
@@ -115,8 +116,14 @@ app.get('/api/health', (_, res) => res.json({
 
 /* ── Global error handler ── */
 app.use((err, _req, res, _next) => {
-  console.error('[ERROR]', err.message)
-  res.status(500).json({ message: err.message || 'Server error' })
+  // Mistakes in the request itself get a 4xx and a plain answer
+  if (err.type === 'entity.too.large') return res.status(413).json({ message: 'Request is too large' })
+  if (err.type === 'entity.parse.failed') return res.status(400).json({ message: 'The request could not be read (invalid JSON)' })
+  const status = err.status || err.statusCode
+  if (status >= 400 && status < 500) return res.status(status).json({ message: err.message })
+  // Real server problems: log the details, but don't show them to visitors
+  console.error('[ERROR]', err.stack || err.message)
+  res.status(500).json({ message: process.env.NODE_ENV === 'production' ? 'Server error. Please try again.' : (err.message || 'Server error') })
 })
 
 module.exports = app

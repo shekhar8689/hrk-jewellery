@@ -201,8 +201,13 @@ exports.create = async (req, res) => {
     const lines = []
     for (const item of items) {
       const p     = byId[String(item.product)]
-      const size  = String(item.size  || '').trim()
-      const color = String(item.color || '').trim()
+      // One option only → it is the customer's choice; several → they must pick one
+      // (same rule as the website, so a hand-made request can't skip the size)
+      const only  = list => (list?.length === 1 ? list[0] : '')
+      const size  = String(item.size  || '').trim() || only(p.sizes)
+      const color = String(item.color || '').trim() || only(p.colors)
+      if (!size  && p.sizes?.length)  return fail(400, { message: `Please choose a size for "${p.name}"` })
+      if (!color && p.colors?.length) return fail(400, { message: `Please choose a colour for "${p.name}"` })
       if (size  && p.sizes?.length  && !p.sizes.includes(size))
         return fail(400, { message: `Size "${size}" is not available for "${p.name}"` })
       if (color && p.colors?.length && !p.colors.includes(color))
@@ -252,6 +257,20 @@ exports.create = async (req, res) => {
       })
     }
 
+    // ── Take the stock: only if it is still there ─────────────
+    // The condition and the change happen together in the database, so two
+    // people paying for the last piece at the same moment can't both get it.
+    const taken = []
+    const giveBack = () => Promise.all(taken.map(id => Product.updateOne({ _id: id }, { $inc: { stock: wanted[id] } }, { session })))
+    for (const id of ids) {
+      const ok = await Product.updateOne({ _id: id, stock: { $gte: wanted[id] } }, { $inc: { stock: -wanted[id] } }, { session })
+      if (!ok.modifiedCount) {
+        await giveBack()
+        return fail(409, { message: `Sorry, "${byId[id].name}" just sold out. Please check your bag.`, productId: id, available: 0, soldOut: true })
+      }
+      taken.push(id)
+    }
+
     // ── Count the coupon use (only now that every check has passed) ──
     // If someone else used the last one a moment ago, stop.
     if (coupon) {
@@ -260,12 +279,10 @@ exports.create = async (req, res) => {
         { $inc: { usedCount: 1 } },
         { session }
       )
-      if (!counted.modifiedCount) return fail(400, { message: 'This coupon has just reached its usage limit', couponError: true })
-    }
-
-    // ── Atomically deduct stock ───────────────────────────────
-    for (const id of ids) {
-      await Product.findByIdAndUpdate(id, { $inc: { stock: -wanted[id] } }, { session })
+      if (!counted.modifiedCount) {
+        await giveBack()
+        return fail(400, { message: 'This coupon has just reached its usage limit', couponError: true })
+      }
     }
 
     // ── Build and save the order ─────────────────────────────
