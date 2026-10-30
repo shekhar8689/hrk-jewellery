@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
 import { getImageUrl } from '../utils/image'
 import { autoPick, missingChoice } from '../utils/options'
+import { trackProduct } from '../utils/track'
 
 export default function ProductCard({ product }) {
   const { dispatch } = useCart()
@@ -41,6 +42,7 @@ export default function ProductCard({ product }) {
         selectedColor: autoPick(product.colors),
       },
     })
+    trackProduct(productId, 'cart')
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
   }

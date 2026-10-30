@@ -13,6 +13,9 @@ const productFiles = mediaUpload([
 router.get('/', protectOptional, ctrl.getAll)
 router.get('/:id', protectOptional, ctrl.getOne)
 
+// A customer looked at / added this product to the bag (for the admin's "Popular" report)
+router.post('/:id/seen', require('../controllers/statsController').seen)
+
 router.post('/',
   protect, adminOnly,
   productFiles,

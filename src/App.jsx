@@ -39,6 +39,7 @@ const Help = lazy(() => import('./pages/Help'))
 const AdminLogin = lazy(() => import('./admin/pages/AdminLogin'))
 const Dashboard = lazy(() => import('./admin/pages/Dashboard'))
 const Products = lazy(() => import('./admin/pages/Products'))
+const AdminPopular = lazy(() => import('./admin/pages/Popular'))
 const Orders = lazy(() => import('./admin/pages/Orders'))
 const AdminUsers = lazy(() => import('./admin/pages/AdminUsers'))
 const Banners = lazy(() => import('./admin/pages/Banners'))
@@ -142,6 +143,7 @@ export default function App() {
             <Route path="/admin/login"     element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/admin/products"  element={<ProtectedRoute><Products /></ProtectedRoute>} />
+            <Route path="/admin/popular"   element={<ProtectedRoute><AdminPopular /></ProtectedRoute>} />
             <Route path="/admin/orders"    element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/admin/users"     element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/banners"   element={<ProtectedRoute><Banners /></ProtectedRoute>} />
