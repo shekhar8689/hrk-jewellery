@@ -9,11 +9,24 @@
       "destination": "https://hrk-jewellery.onrender.com/robots.txt"
     },
     {
+      "source": "/api/:path*",
+      "destination": "https://hrk-jewellery.onrender.com/api/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "x-vercel-enable-rewrite-caching",
+          "value": "1"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

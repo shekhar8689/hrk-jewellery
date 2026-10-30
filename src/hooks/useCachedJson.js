@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import { publicFetch } from '../config/api'
 const keyOf = path => `hrk_cache:${path}`
 const read = path => { try { const v = localStorage.getItem(keyOf(path)); return v ? JSON.parse(v) : undefined } catch { return undefined } }
 const write = (path, v) => { try { localStorage.setItem(keyOf(path), JSON.stringify(v)) } catch { /* private mode / full */ } }
@@ -16,7 +16,7 @@ export default function useCachedJson(path, fallback) {
   const [data, setData] = useState(() => read(path))
   useEffect(() => {
     let alive = true
-    fetch(`${API}${path}`)
+    publicFetch(path)
       .then(async r => {
         if (!r.ok) throw new Error('bad response')
         const fresh = await r.json()
