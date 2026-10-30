@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../context/AdminAuthContext'
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react'
+import usePageTitle from '../../hooks/usePageTitle'
 
 export default function AdminLogin() {
   const { login } = useAdminAuth()
@@ -10,6 +11,7 @@ export default function AdminLogin() {
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  usePageTitle('Admin Login')
 
   const submit = async (e) => {
     e.preventDefault()

@@ -9,6 +9,7 @@ import { WishlistProvider }  from './context/WishlistContext'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import Cart   from './components/Cart'
+import ScrollToTop from './components/ScrollToTop'
 
 /* Public pages */
 import Home          from './pages/Home'
@@ -131,6 +132,7 @@ function PublicSite() {
 export default function App() {
   return (
     <UserAuthProvider>
+      <ScrollToTop />
       <WishlistProvider>
         <AdminAuthProvider>
           <ErrorBoundary>

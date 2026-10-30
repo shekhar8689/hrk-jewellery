@@ -414,6 +414,13 @@ export default function ProductDetail({ onCartOpen }) {
     return () => { document.title = 'HRK Jewellery'; undo() }
   }, [product])
 
+  // Wrong or removed product link: say so in the tab too
+  useEffect(() => {
+    if (!notFound) return
+    document.title = 'Product not found — HRK Jewellery'
+    return () => { document.title = 'HRK Jewellery' }
+  }, [notFound])
+
   const wished      = product ? isInWishlist(product._id) : false
   const outOfStock  = product && product.stock === 0
   const lowStock    = product && product.stock > 0 && product.stock <= 5
@@ -476,7 +483,7 @@ export default function ProductDetail({ onCartOpen }) {
   if (notFound || !product) {
     return (
       <div className="flex flex-col items-center justify-center min-h-96 gap-4">
-        <p className="text-gray-500 text-lg">Product not found.</p>
+        <h1 className="text-gray-500 text-lg">Product not found.</h1>
         <Link to="/collections" className="btn-gold">Back to Collections</Link>
       </div>
     )
