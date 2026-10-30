@@ -1,5 +1,9 @@
 /*
- * Sends email through Brevo's web API (free: 300 emails a day).
+ * Sends email in one of two ways:
+ *  1. Your own Gmail, through a Google Apps Script web app (free, ~100 emails a day).
+ *     Set on Render: GMAIL_SCRIPT_URL (the script's /exec address) and EMAIL_SECRET
+ *     (same secret as in the script). See server/gmail-sender.gs. Used first when set.
+ *  2. Brevo's web API (free: 300 emails a day) — needs your own domain as sender.
  * Render's free plan blocks normal SMTP email, so a web API is used.
  * Set on Render: BREVO_API_KEY and EMAIL_FROM ("HRK Jewellery <you@gmail.com>").
  * Without them, nothing is sent and { sent: false } is returned.
@@ -10,12 +14,53 @@ const parseFrom = from => {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const emailReady = () => !!(process.env.BREVO_API_KEY && process.env.EMAIL_FROM)
+const gmailMode = () => !!(process.env.GMAIL_SCRIPT_URL || '').trim()
+const emailReady = () => gmailMode() ? !!process.env.EMAIL_SECRET : !!(process.env.BREVO_API_KEY && process.env.EMAIL_FROM)
+
+function gmailProblem() {
+  const url = (process.env.GMAIL_SCRIPT_URL || '').trim(), secret = (process.env.EMAIL_SECRET || '').trim()
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) return 'GMAIL_SCRIPT_URL must be the Web app URL from Apps Script (Deploy → Manage deployments). It looks like https://script.google.com/macros/s/…/exec'
+  if (secret.length < 8) return 'EMAIL_SECRET is missing or too short on Render. Use the same secret (8+ characters) that you typed in the script.'
+  return null
+}
+
+// What the Apps Script answered, in plain words
+function explainGmail(error) {
+  const e = String(error || '')
+  if (/secret/i.test(e)) return 'The script refused the secret. EMAIL_SECRET on Render must be exactly the same as SECRET in the script (then Deploy → New version).'
+  if (/too many times|quota|limit/i.test(e)) return 'Gmail daily limit reached (about 100 emails a day). Try again tomorrow.'
+  return `The Gmail script answered: ${e || 'unknown error'}`
+}
+
+async function sendViaGmail({ to, toName, subject, html, text }) {
+  try {
+    const res = await fetch(process.env.GMAIL_SCRIPT_URL.trim(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ secret: process.env.EMAIL_SECRET.trim(), to, name: toName || '', subject, html, text }),
+      redirect: 'follow',
+    })
+    const raw = await res.text()
+    let body
+    try { body = JSON.parse(raw) } catch {
+      const why = 'The Gmail script sent back a web page instead of an answer. In Apps Script: Deploy → Manage deployments → edit → "Who has access" must be "Anyone", then Deploy, and copy the /exec URL again.'
+      console.error('Email not sent:', why); return { sent: false, problem: why }
+    }
+    if (body && body.ok) return { sent: true }
+    const why = explainGmail(body && body.error)
+    console.error('Email not sent:', why)
+    return { sent: false, problem: why }
+  } catch (err) {
+    console.error('Email not sent:', err.message)
+    return { sent: false, problem: `Could not reach the Gmail script: ${err.message}` }
+  }
+}
 
 // Plain-words explanation of why email can't be sent (null = settings look fine)
 function settingsProblem() {
+  if (gmailMode()) return gmailProblem()
   const key = (process.env.BREVO_API_KEY || '').trim(), from = process.env.EMAIL_FROM || ''
-  if (!key || !from) return 'BREVO_API_KEY and/or EMAIL_FROM are missing on Render (your server → Environment). Add both, save, and wait for Render to restart.'
+  if (!key || !from) return 'Email is not set up on Render. Easiest: add GMAIL_SCRIPT_URL and EMAIL_SECRET (Gmail sender), or BREVO_API_KEY and EMAIL_FROM (Brevo). Save and wait for Render to restart.'
   if (key.startsWith('xsmtpsib-')) return "BREVO_API_KEY is Brevo's SMTP key (starts with xsmtpsib-). Create an API key instead: Brevo → SMTP & API → API Keys → Generate (it starts with xkeysib-)."
   if (!EMAIL_RE.test(parseFrom(from).email)) return 'EMAIL_FROM must look like: HRK Jewellery <yourname@gmail.com>'
   return null
@@ -34,6 +79,7 @@ function explain(status, body) {
 async function sendEmail({ to, toName, subject, html, text }) {
   const problem = settingsProblem()
   if (problem) { console.error('Email not sent:', problem); return { sent: false, problem } }
+  if (gmailMode()) return sendViaGmail({ to, toName, subject, html, text })
   try {
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',

@@ -96,7 +96,7 @@ export default function ShopSettings() {
 
             <section className="space-y-3">
               <h2 className="font-semibold text-gray-900">Password-reset emails</h2>
-              <p className="text-sm text-gray-500">Sent through Brevo (set BREVO_API_KEY and EMAIL_FROM on Render). Check it works:</p>
+              <p className="text-sm text-gray-500">Sent from your Gmail (set GMAIL_SCRIPT_URL and EMAIL_SECRET on Render), or through Brevo. Check it works:</p>
               <button type="button" onClick={testEmail} disabled={testing}
                 className="inline-flex items-center gap-1.5 text-sm border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 disabled:opacity-50">
                 <Mail size={15} /> {testing ? 'Sending…' : 'Send test email to me'}
