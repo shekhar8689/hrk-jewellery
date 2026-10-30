@@ -63,15 +63,31 @@ app.use((_, res, next) => {
 /* ── Serve uploaded files as static assets ── */
 app.use('/uploads', express.static(uploadsDir))
 
-/* ── Short browser/CDN caching for public, logged-out GET requests ──
- * Product and banner lists change rarely, so letting browsers reuse them for a
- * minute makes page-to-page navigation much faster. Requests that carry an
- * Authorization header (admin panel, logged-in users) are never cached, so the
- * admin always sees fresh data right after an edit.
+/* ── Caching ──
+ * Shop data (products, categories, banners, offer, shop details, reviews) is
+ * the same for every visitor, so:
+ *  - browsers reuse it for a minute (faster page-to-page navigation), and
+ *  - Vercel's CDN (the website proxies these reads through /api) keeps a copy and
+ *    serves it instantly, refreshing in the background. When the free Render
+ *    server is asleep, customers still see products at once instead of waiting
+ *    30–50 seconds.
+ * Anything signed in, private, failed or not a GET is never kept by the CDN.
  */
+const CDN_HEADERS = ['Vercel-CDN-Cache-Control', 'CDN-Cache-Control']
+app.use('/api', (req, res, next) => {
+  for (const h of CDN_HEADERS) res.setHeader(h, 'no-store')
+  next()
+})
 const publicCache = (req, res, next) => {
   if (req.method === 'GET' && !req.headers.authorization) {
     res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
+    for (const h of CDN_HEADERS) res.setHeader(h, 'max-age=60, stale-while-revalidate=86400')
+    // Only good answers are kept: a 404 or an error must not be served to others
+    const writeHead = res.writeHead
+    res.writeHead = function (status, ...rest) {
+      if (status !== 200 && status !== 304) { for (const h of CDN_HEADERS) this.setHeader(h, 'no-store'); this.setHeader('Cache-Control', 'no-store') }
+      return writeHead.call(this, status, ...rest)
+    }
   } else {
     res.setHeader('Cache-Control', 'no-store')
   }
@@ -79,7 +95,6 @@ const publicCache = (req, res, next) => {
   next()
 }
 
-/* ── API routes ── */
 app.use('/api/auth',      require('./routes/auth'))
 app.use('/api/products',  publicCache, require('./routes/products'))
 app.use('/api/orders',    require('./routes/orders'))
@@ -88,12 +103,12 @@ app.use('/api/banners',   publicCache, require('./routes/banners'))
 app.use('/api/categories', publicCache, require('./routes/categories'))
 app.use('/api/offer',      publicCache, require('./routes/offer'))
 app.use('/api/dashboard', require('./routes/dashboard'))
-app.use('/api/reviews',        require('./routes/reviews'))
+app.use('/api/reviews',        publicCache, require('./routes/reviews'))
 app.use('/api/admin/reviews',  require('./routes/adminReviews'))
 app.use('/api/coupons',        require('./routes/coupons'))
 app.use('/api/payment',        require('./routes/payment'))
 app.use('/api/contact',        require('./routes/contact'))
-app.use('/api/shop',           require('./routes/shop'))
+app.use('/api/shop',           publicCache, require('./routes/shop'))
 
 /* ── For Google: sitemap with every product, and robots.txt (the website
  *    forwards /sitemap.xml and /robots.txt here, see vercel.json) ── */

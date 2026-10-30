@@ -3,7 +3,7 @@ import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { SlidersHorizontal, ChevronDown, X } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import { publicFetch } from '../config/api'
 
 /* Fixed category list — matches the DB enum */
 const CATEGORIES = [
@@ -49,7 +49,7 @@ export default function Collections() {
     if (filter === 'bestseller') params.set('isBestseller', 'true')
     if (query)                   params.set('search', query)
 
-    fetch(`${API}/products?${params}`)
+    publicFetch(`/products?${params}`)
       .then(r => r.json())
       .then(data => {
         const list = data.products || []
@@ -211,7 +211,7 @@ export default function Collections() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          {displayed.map(p => <ProductCard key={p._id} product={p} />)}
+          {displayed.map((p, i) => <ProductCard key={p._id} product={p} priority={i < 4} />)}
         </div>
       )}
     </main>

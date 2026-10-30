@@ -3,11 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Heart, ShoppingBag, Star } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
-import { getImageUrl } from '../utils/image'
+import { getImageUrl, getImageSrcSet } from '../utils/image'
 import { autoPick, missingChoice } from '../utils/options'
 import { trackProduct } from '../utils/track'
 
-export default function ProductCard({ product }) {
+// priority: the first cards on screen load at once instead of waiting their turn
+export default function ProductCard({ product, priority = false }) {
   const { dispatch } = useCart()
   const { isInWishlist, toggleWishlist } = useWishlist()
   const [imgIdx, setImgIdx] = useState(0)
@@ -59,7 +60,9 @@ export default function ProductCard({ product }) {
         {images[imgIdx] || images[0] ? (
           <img
             src={getImageUrl(images[imgIdx] || images[0], 600)}
-            loading="lazy" decoding="async"
+            srcSet={getImageSrcSet(images[imgIdx] || images[0], [300, 450, 600, 900])}
+            sizes="(min-width: 1280px) 300px, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+            loading={priority ? 'eager' : 'lazy'} fetchpriority={priority ? 'high' : undefined} decoding="async"
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
           />

@@ -1,12 +1,14 @@
-# Keeps the free Render backend awake so visitors don't wait ~1 minute
-# for it to start. Pings the health endpoint every 10 minutes.
+# Backup pinger for the free Render backend. NOTE: GitHub runs free scheduled
+# jobs late (often hours apart), so this alone can't keep the server awake.
+# The main pinger is a free cron-job.org (or UptimeRobot) job that opens
+# https://hrk-jewellery.onrender.com/api/health every 10 minutes.
 # Note: GitHub pauses scheduled jobs after 60 days with no commits to the
 # repo; re-enable it from the Actions tab if that happens.
 name: Keep server awake
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:

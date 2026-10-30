@@ -43,6 +43,19 @@ export function getImageUrl(path, width) {
   return SERVER + withSlash
 }
 
+/**
+ * getImageSrcSet(path, widths) — lets the browser pick the right size
+ * (a phone gets a small photo, a big screen a large one). Cloudinary only;
+ * other photos return undefined so <img> just uses src.
+ *   getImageSrcSet(url, [300, 600]) → "…w_300/… 300w, …w_600/… 600w"
+ */
+export function getImageSrcSet(path, widths) {
+  if (!path || !CLOUDINARY_UPLOAD.test(path)) return undefined
+  const m = path.match(CLOUDINARY_UPLOAD)
+  if (/^(f_|q_|w_|c_)/.test(m[2])) return undefined
+  return widths.map(w => `${getImageUrl(path, w)} ${w}w`).join(', ')
+}
+
 const CLOUDINARY_VIDEO = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(.*)$/
 
 /**

@@ -27,3 +27,17 @@ test('the website sends security headers', () => {
   const all = v.headers.find(h => h.source === '/(.*)').headers.map(h => h.key)
   expect(all).toEqual(expect.arrayContaining(['X-Content-Type-Options', 'X-Frame-Options', 'Strict-Transport-Security', 'Referrer-Policy']))
 })
+
+test('shop data is read through the website (/api) so Vercel can keep a copy while the server sleeps', () => {
+  const v = JSON.parse(read('vercel.json'))
+  const i = v.rewrites.findIndex(x => x.source === '/api/:path*')
+  expect(i).toBeGreaterThanOrEqual(0)
+  expect(v.rewrites[i].destination).toMatch(/^https:\/\/.+\/api\/:path\*$/)
+  expect(i).toBeLessThan(v.rewrites.findIndex(x => x.source === '/(.*)'))
+  const api = v.headers.find(h => h.source === '/api/(.*)').headers
+  expect(api).toEqual(expect.arrayContaining([{ key: 'x-vercel-enable-rewrite-caching', value: '1' }]))
+})
+
+test('fonts come from the site itself, not Google', () => {
+  expect(read('index.html')).not.toMatch(/fonts\.googleapis/)
+})

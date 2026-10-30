@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getImageUrl, getVideoUrl, getVideoPoster } from '../utils/image'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import { publicFetch } from '../config/api'
 
 // Banners from the last visit, so they show instantly while the server answers
 const CACHE_KEY = 'hrk_banners'
@@ -37,7 +37,7 @@ export default function Hero() {
   const [current, setCurrent] = useState(0)
 
   useEffect(() => {
-    fetch(`${API}/banners/active`)
+    publicFetch('/banners/active')
       .then(res => res.json())
       .then(data => {
         if (!Array.isArray(data)) return

@@ -1,4 +1,4 @@
-import { test, expect } from 'vitest'
+import { test, expect, describe } from 'vitest'
 import { getImageUrl, getVideoUrl, getVideoPoster } from './image'
 
 const CL = 'https://res.cloudinary.com/demo/image/upload/v1/hrk/ring.jpg'
@@ -27,4 +27,20 @@ test('videos: Cloudinary gets f_auto,q_auto and a poster frame', () => {
   expect(getVideoUrl(v)).toBe('https://res.cloudinary.com/demo/video/upload/f_auto,q_auto/v1/hrk/clip.mp4')
   expect(getVideoPoster(v, 800)).toBe('https://res.cloudinary.com/demo/video/upload/so_0,f_auto,q_auto,c_limit,w_800/v1/hrk/clip.jpg')
   expect(getVideoPoster('uploads/clip.mp4')).toBe('')
+})
+
+describe('getImageSrcSet (phones download smaller photos)', () => {
+  const C = 'https://res.cloudinary.com/demo/image/upload/v1/ring.jpg'
+  test('Cloudinary photo → several widths', async () => {
+    const { getImageSrcSet } = await import('./image')
+    expect(getImageSrcSet(C, [300, 600])).toBe(
+      'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,c_limit,w_300/v1/ring.jpg 300w, ' +
+      'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,c_limit,w_600/v1/ring.jpg 600w')
+  })
+  test('other photos (uploads folder, other sites, empty) → no srcset', async () => {
+    const { getImageSrcSet } = await import('./image')
+    expect(getImageSrcSet('uploads/a.jpg', [300, 600])).toBeUndefined()
+    expect(getImageSrcSet('https://images.unsplash.com/x.jpg', [300])).toBeUndefined()
+    expect(getImageSrcSet('', [300])).toBeUndefined()
+  })
 })

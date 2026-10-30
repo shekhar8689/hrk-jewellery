@@ -11,13 +11,13 @@ import Toast from '../components/Toast'
 import { useCart } from '../context/CartContext'
 import { useUserAuth } from '../context/UserAuthContext'
 import { useWishlist } from '../context/WishlistContext'
-import { getImageUrl, getVideoUrl, getVideoPoster } from '../utils/image'
+import { getImageUrl, getImageSrcSet, getVideoUrl, getVideoPoster } from '../utils/image'
 import { autoPick, missingChoice } from '../utils/options'
 import { RETURN_REPORT_WINDOW } from '../config/policy'
 import { applySeo, productJsonLd } from '../utils/seo'
 import { trackProduct } from '../utils/track'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import { API, publicFetch } from '../config/api'
 
 // ── Interactive 5-star picker ─────────────────────────────────────────────────
 function StarPicker({ value, onChange }) {
@@ -131,7 +131,7 @@ function ReviewsSection({ productId }) {
   // Fetch approved reviews
   useEffect(() => {
     setLoadingR(true)
-    fetch(`${API}/reviews/${productId}`)
+    publicFetch(`/reviews/${productId}`)
       .then(r => r.json())
       .then(data => setReviews(Array.isArray(data) ? data : []))
       .catch(() => {})
@@ -387,7 +387,7 @@ export default function ProductDetail({ onCartOpen }) {
 
   useEffect(() => {
     setLoading(true); setNotFound(false); setImgIdx(0); setQty(1)
-    fetch(`${API}/products/${id}`)
+    publicFetch(`/products/${id}`)
       .then(r => { if (!r.ok) { setNotFound(true); return null } return r.json() })
       .then(data => {
         if (!data) return
@@ -395,7 +395,7 @@ export default function ProductDetail({ onCartOpen }) {
         // Pre-select only when there is a single option; otherwise the customer chooses
         setSize(autoPick(data.sizes))
         setColor(autoPick(data.colors))
-        fetch(`${API}/products?visible=true&category=${data.category}&limit=5`)
+        publicFetch(`/products?visible=true&category=${data.category}&limit=5`)
           .then(r => r.json())
           .then(rel => setRelated((rel.products || []).filter(p => p._id !== id).slice(0, 4)))
           .catch(() => {})
@@ -560,6 +560,7 @@ export default function ProductDetail({ onCartOpen }) {
               />
             ) : shown ? (
               <img src={getImageUrl(shown.src, 1200)} alt={product.name} fetchpriority="high"
+                srcSet={getImageSrcSet(shown.src, [480, 720, 960, 1200])} sizes="(min-width: 768px) 50vw, 100vw"
                 className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${outOfStock ? 'opacity-50' : ''}`} />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">No image</div>
