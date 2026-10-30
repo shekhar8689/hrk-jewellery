@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle, MessageCircle, Phone } from 'lucide-react'
+import { AlertTriangle, CheckCircle, MessageCircle, Phone, Mail } from 'lucide-react'
 import AdminLayout from '../components/AdminLayout'
 import { api } from '../api'
 import { whatsappLink, telLink } from '../../config/shop'
@@ -26,6 +26,14 @@ export default function ShopSettings() {
   useEffect(() => {
     api.getShop().then(s => { setSaved(s); setForm(s) }).catch(e => setError(e.message))
   }, [])
+
+  // Password-reset email: send a test and show Brevo's problem in plain words
+  const [mailTest, setMailTest] = useState(null)
+  const [testing, setTesting] = useState(false)
+  const testEmail = async () => {
+    setTesting(true); setMailTest(null)
+    try { setMailTest(await api.testEmail()) } catch (e) { setMailTest({ sent: false, problem: e.message }) } finally { setTesting(false) }
+  }
 
   const set = k => e => { setForm(f => ({ ...f, [k]: e.target.value })); setNotice(''); setError('') }
 
@@ -84,6 +92,17 @@ export default function ShopSettings() {
                 <Field id="s-fb" label="Facebook" value={form.facebook} onChange={set('facebook')} placeholder="https://www.facebook.com/…" />
                 <Field id="s-yt" label="YouTube" value={form.youtube} onChange={set('youtube')} placeholder="https://www.youtube.com/@…" />
               </div>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="font-semibold text-gray-900">Password-reset emails</h2>
+              <p className="text-sm text-gray-500">Sent through Brevo (set BREVO_API_KEY and EMAIL_FROM on Render). Check it works:</p>
+              <button type="button" onClick={testEmail} disabled={testing}
+                className="inline-flex items-center gap-1.5 text-sm border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 disabled:opacity-50">
+                <Mail size={15} /> {testing ? 'Sending…' : 'Send test email to me'}
+              </button>
+              {mailTest?.sent && <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">Sent to {mailTest.to}. Check that inbox (and spam). If it arrived, customers' reset emails work.</p>}
+              {mailTest && !mailTest.sent && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2"><strong>Not sent.</strong> {mailTest.problem}</p>}
             </section>
 
             {error && <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg"><AlertTriangle size={15} /> {error}</div>}

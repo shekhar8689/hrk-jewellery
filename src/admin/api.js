@@ -48,6 +48,7 @@ export const api = {
   // Shop contact details
   getShop: () => req('GET', '/shop'),
   updateShop: (data) => req('PUT', '/shop', data),
+  testEmail: () => req('POST', '/shop/test-email', {}),
 
   // UPI payment settings
   getPaymentSettings: () => req('GET', '/payment/admin'),

@@ -76,3 +76,16 @@ exports.update = async (req, res) => {
     res.status(400).json({ message: err.message })
   }
 }
+
+// ── POST /api/shop/test-email  (admin) ─────────────────────────────────────────
+// Sends a test email to the admin and explains in plain words if it fails
+exports.testEmail = async (req, res) => {
+  const { sendEmail } = require('../utils/email')
+  const to = req.user.email
+  const r = await sendEmail({
+    to, subject: 'HRK Jewellery test email',
+    text: 'It works! Password reset emails will reach your customers.',
+    html: '<p>It works! Password reset emails will reach your customers.</p>',
+  })
+  res.json(r.sent ? { sent: true, to } : { sent: false, to, problem: r.problem })
+}
