@@ -14,7 +14,7 @@ const ADMIN_ROUTES = [
   ['get', '/api/admin/reviews'], ['delete', `/api/reviews/${ID}`],
   ['get', '/api/categories/admin'],
   ['get', '/api/contact'], ['patch', `/api/contact/${ID}`],
-  ['put', '/api/shop'],
+  ['put', '/api/shop'], ['post', `/api/users/${ID}/reset-link`],
 ]
 
 let customer

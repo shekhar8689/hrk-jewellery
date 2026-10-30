@@ -2,6 +2,17 @@ const crypto = require('crypto')
 const jwt = require('jsonwebtoken')
 const { validationResult } = require('express-validator')
 const User = require('../models/User')
+const { sendEmail, siteUrl, resetEmail } = require('../utils/email')
+
+// New one-hour reset link for a customer (only a hash of it is stored)
+async function makeResetLink(user) {
+  const token = crypto.randomBytes(32).toString('hex')
+  user.passwordResetToken   = crypto.createHash('sha256').update(token).digest('hex')
+  user.passwordResetExpires = Date.now() + 60 * 60 * 1000
+  await user.save({ validateBeforeSave: false })
+  return `${siteUrl()}/reset-password/${token}`
+}
+exports.makeResetLink = makeResetLink
 const { createLimiter, ipOf } = require('../utils/rateLimit')
 
 // Sign-in limits: 10 wrong passwords per account, and 30 failed sign-ins per
@@ -84,21 +95,15 @@ exports.forgotPassword = async (req, res) => {
       return res.json({ message: 'If that email exists, a reset link has been sent.' })
     }
 
-    const token   = crypto.randomBytes(32).toString('hex')
-    const hashed  = crypto.createHash('sha256').update(token).digest('hex')
-    user.passwordResetToken   = hashed
-    user.passwordResetExpires = Date.now() + 60 * 60 * 1000 // 1 hour
-    await user.save({ validateBeforeSave: false })
-
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${token}`
-
-    // In production wire this to Nodemailer / Resend / SendGrid
-    // For now the token is returned in the response (remove in production)
+    const resetUrl = await makeResetLink(user)
     if (process.env.NODE_ENV !== 'production') console.log(`[DEV] Password reset link for ${email}: ${resetUrl}`)
+
+    const mail = resetEmail(user.name, resetUrl)
+    await sendEmail({ to: user.email, toName: user.name, subject: mail.subject, html: mail.html, text: mail.text })
 
     res.json({
       message: 'If that email exists, a reset link has been sent.',
-      // Remove the line below before going to production:
+      // Only when testing on your own computer:
       _devResetUrl: process.env.NODE_ENV !== 'production' ? resetUrl : undefined,
     })
   } catch {

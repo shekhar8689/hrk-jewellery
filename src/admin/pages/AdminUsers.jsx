@@ -3,6 +3,7 @@ import { Search, X } from 'lucide-react'
 import AdminLayout from '../components/AdminLayout'
 import Pagination from '../components/Pagination'
 import { api } from '../api'
+import ResetLinkButton from './ResetLinkButton'
 
 function UserDetail({ user, orders, onClose, onToggle }) {
   return (
@@ -160,7 +161,8 @@ export default function AdminUsers() {
                           {user.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right whitespace-nowrap space-x-2">
+                        <ResetLinkButton user={user} />
                         <button
                           onClick={() => handleView(user._id)}
                           className="text-xs text-amber-600 hover:text-amber-700 font-medium bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg"
