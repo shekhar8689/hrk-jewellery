@@ -42,23 +42,28 @@ describe('Payment page', () => {
     expect(calls[0].body).toEqual({ orderId: '94E7178C', phone: '9876543210' })
   })
 
-  test('refuses a transaction number that is not 12 digits, without calling the server', async () => {
+  test('no transaction number to type: "I have paid" just tells the shop', async () => {
     const calls = mockApi(order())
     renderPay({ phone: '9876543210' })
-    const input = await screen.findByLabelText(/UPI transaction number/i)
-    await userEvent.type(input, '12345678')
-    await userEvent.click(screen.getByRole('button', { name: /I have paid/i }))
-    expect(screen.getByRole('alert')).toHaveTextContent(/12 digits/)
-    expect(calls.some(c => c.url.endsWith('/upi-ref'))).toBe(false)
-  })
-
-  test('after sending a 12-digit number it says the payment is being checked', async () => {
-    const calls = mockApi(order())
-    renderPay({ phone: '9876543210' })
-    await userEvent.type(await screen.findByLabelText(/UPI transaction number/i), '412345678901')
+    await screen.findByText(/Pay ₹1,709 by UPI/)
+    expect(screen.queryByLabelText(/transaction number/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/12-digit/)).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /I have paid/i }))
     expect(await screen.findByText(/We're checking your payment/)).toBeInTheDocument()
-    expect(calls.find(c => c.url.endsWith('/upi-ref')).body).toEqual({ orderId: '94E7178C', phone: '9876543210', utr: '412345678901' })
+    expect(calls.find(c => c.url.endsWith('/upi-ref')).body).toEqual({ orderId: '94E7178C', phone: '9876543210' })
+    expect(screen.queryByText(/Transaction number/)).not.toBeInTheDocument()
+  })
+
+  test('the QR and app buttons leave the amount for the customer to type, and the page shows the exact amount', async () => {
+    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 (Linux; Android 14)', configurable: true })
+    mockApi(order())
+    renderPay({ phone: '9876543210' })
+    const btn = await screen.findByRole('link', { name: /Open UPI app/i })
+    expect(btn.getAttribute('href')).toMatch(/^upi:\/\/pay\?pa=hrkjewellery%40okaxis/)
+    expect(btn.getAttribute('href')).not.toMatch(/am=/)
+    expect(btn.getAttribute('href')).toMatch(/tn=HRK%20Order%2094E7178C/)
+    for (const a of screen.getAllByRole('link').filter(l => /^(tez|phonepe|paytmmp):/.test(l.getAttribute('href') || ''))) expect(a.getAttribute('href')).not.toMatch(/am=/)
+    expect(screen.getAllByText(/type ₹1,709/i).length).toBeGreaterThan(0)
   })
 
   test('opened on another device: asks for the phone number first', async () => {
@@ -74,37 +79,8 @@ describe('Payment page', () => {
   test('when the shop could not find the payment, it says so and lets the customer pay again', async () => {
     mockApi(order({ paymentStatus: 'failed', upiRef: '412345678901' }))
     renderPay({ phone: '9876543210' })
-    expect(await screen.findByText(/couldn't find a payment/)).toBeInTheDocument()
+    expect(await screen.findByText(/couldn't find your payment/)).toBeInTheDocument()
     expect(screen.getByText(/Pay ₹1,709 by UPI/)).toBeInTheDocument()
-  })
-
-  test('a 14-digit number is not silently cut to 12', async () => {
-    const calls = mockApi(order())
-    renderPay({ phone: '9876543210' })
-    const input = await screen.findByLabelText(/UPI transaction number/i)
-    await userEvent.type(input, '41234567890155')
-    expect(input).toHaveValue('41234567890155')
-    await userEvent.click(screen.getByRole('button', { name: /I have paid/i }))
-    expect(screen.getByRole('alert')).toHaveTextContent(/12 digits/)
-    expect(calls.some(c => c.url.endsWith('/upi-ref'))).toBe(false)
-  })
-
-  test("pasting PhonePe's own Transaction ID explains which number to use", async () => {
-    const calls = mockApi(order())
-    renderPay({ phone: '9876543210' })
-    await userEvent.type(await screen.findByLabelText(/UPI transaction number/i), 'T2410301234567890123456')
-    await userEvent.click(screen.getByRole('button', { name: /I have paid/i }))
-    expect(screen.getByRole('alert')).toHaveTextContent(/PhonePe.*UTR/)
-    expect(calls.some(c => c.url.endsWith('/upi-ref'))).toBe(false)
-  })
-
-  test('a number pasted with spaces is sent as 12 digits', async () => {
-    const calls = mockApi(order())
-    renderPay({ phone: '9876543210' })
-    await userEvent.type(await screen.findByLabelText(/UPI transaction number/i), '4123 4567 8901')
-    await userEvent.click(screen.getByRole('button', { name: /I have paid/i }))
-    await screen.findByText(/We're checking your payment/)
-    expect(calls.find(c => c.url.endsWith('/upi-ref')).body.utr).toBe('412345678901')
   })
 
   test('"Order placed" is not shown once the number is sent', async () => {

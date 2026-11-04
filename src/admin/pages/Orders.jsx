@@ -36,7 +36,7 @@ function PaymentPanel({ order, onPayment }) {
   if (order.paymentMethod !== 'upi') return null
   const badge = paymentBadge(order)
   const mark = async received => {
-    if (!received && !window.confirm('Mark this payment as NOT received? The customer will be asked to check and send the transaction number again.')) return
+    if (!received && !window.confirm('Mark this payment as NOT received? The customer will be asked to pay again or contact you.')) return
     setBusy(true); setError('')
     try { await onPayment(order._id, received) } catch (err) { setError(err.message) } finally { setBusy(false) }
   }
@@ -57,12 +57,16 @@ function PaymentPanel({ order, onPayment }) {
           </button>
           {order.paymentSubmittedAt && <span className="text-xs text-gray-400">sent {fmt(order.paymentSubmittedAt)}</span>}
         </p>
+      ) : order.paymentStatus === 'submitted' ? (
+        <p className="text-sm text-gray-600">
+          Customer tapped <strong>I have paid</strong>{order.paymentSubmittedAt ? ` on ${fmt(order.paymentSubmittedAt)}` : ''}. Look for the note <span className="font-mono font-semibold text-gray-900">HRK Order {String(order._id).slice(-8).toUpperCase()}</span> or the name {order.shippingAddress?.name}.
+        </p>
       ) : order.paymentStatus !== 'paid' && (
-        <p className="text-sm text-gray-500">The customer hasn't sent a transaction number yet.</p>
+        <p className="text-sm text-gray-500">The customer hasn't said they paid yet.</p>
       )}
       {order.paymentStatus === 'paid' && order.paidAt && <p className="text-xs text-green-700">Marked as received {fmt(order.paidAt)}</p>}
       {order.paymentStatus === 'submitted' && (
-        <p className="text-xs text-gray-500">Check your bank or UPI app for this transaction number and amount before shipping.</p>
+        <p className="text-xs text-gray-500">Check your bank or UPI app for this amount before shipping.</p>
       )}
       {order.paymentStatus === 'paid' && order.status === 'cancelled' && (
         <p className="text-xs text-red-600">This order is cancelled but was paid. Please refund ₹{order.totalAmount?.toLocaleString('en-IN')} to the customer.</p>

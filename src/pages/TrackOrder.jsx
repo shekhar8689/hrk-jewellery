@@ -153,7 +153,7 @@ export default function TrackOrder() {
               <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm flex flex-col sm:flex-row sm:items-center gap-3">
                 <p className="text-amber-900 flex-1">
                   {order.paymentStatus === 'failed'
-                    ? <>We couldn't find your payment for transaction number <span className="font-mono">{order.upiRef}</span>. Please check and send it again.</>
+                    ? <>We couldn't find your payment yet. If you haven't paid, please pay now. If you have, please contact us with your Order ID.</>
                     : <>Payment of <strong>{rupees(order.totalAmount)}</strong> is pending. Pay by UPI to confirm your order.</>}
                 </p>
                 <Link to={`/pay?id=${order.orderId}`} className="btn-gold px-5 py-2.5 rounded-xl text-sm font-bold text-center shrink-0">Pay now</Link>
@@ -161,7 +161,7 @@ export default function TrackOrder() {
             )}
             {order.paymentStatus === 'submitted' && order.status === 'pending' && (
               <p className="mt-4 bg-blue-50 border border-blue-100 text-blue-800 rounded-xl px-4 py-3 text-sm">
-                We're checking your UPI payment (transaction no. <span className="font-mono">{order.upiRef}</span>). Your order is confirmed as soon as it shows in our account.
+                We're checking your UPI payment{order.upiRef ? <> (transaction no. <span className="font-mono">{order.upiRef}</span>)</> : null}. Your order is confirmed as soon as it shows in our account.
               </p>
             )}
 

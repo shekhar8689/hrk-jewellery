@@ -29,6 +29,12 @@ test('app-specific links use each app and the same details', () => {
   for (const l of links) expect(l).toContain('am=1709.00')
 })
 
+test('without an amount the link has no am= (the customer types it in the UPI app)', () => {
+  const link = upiLink({ ...pay, amount: undefined })
+  expect(link).toBe('upi://pay?pa=hrkjewellery%40okaxis&pn=HRK%20Jewellery&cu=INR&tn=HRK%20Order%2094E7178C')
+  for (const a of UPI_APPS) expect(a.link({ ...pay, amount: null })).not.toContain('am=')
+})
+
 describe('needsPayment', () => {
   const o = { paymentMethod: 'upi', status: 'pending', paymentStatus: 'pending' }
   test.each([
