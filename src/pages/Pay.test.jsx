@@ -66,6 +66,20 @@ describe('Payment page', () => {
     expect(screen.getAllByText(/type ₹1,709/i).length).toBeGreaterThan(0)
   })
 
+  test('on a phone the QR comes first: save it, then scan it from the gallery in the UPI app', async () => {
+    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 (Linux; Android 14)', configurable: true })
+    mockApi(order())
+    renderPay({ phone: '9876543210' })
+    await waitFor(() => expect(screen.getByAltText(/UPI QR code/)).toHaveAttribute('src', expect.stringMatching(/^data:image\/png/)))
+    const save = screen.getByRole('link', { name: /Save QR/i })
+    expect(save).toHaveAttribute('download', 'HRK-Order-94E7178C-QR.png')
+    expect(screen.getByText(/Upload from gallery/i)).toBeInTheDocument()
+    // the QR and the save button come before the app buttons on the page
+    const app = screen.getByRole('link', { name: /Open UPI app/i })
+    expect(save.compareDocumentPosition(app) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(app.className).not.toMatch(/btn-gold/)
+  })
+
   test('opened on another device: asks for the phone number first', async () => {
     const calls = mockApi(order())
     renderPay(undefined)

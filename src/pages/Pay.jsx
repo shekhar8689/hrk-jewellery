@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { CheckCircle, Copy, Smartphone, Clock, AlertTriangle, Download, Loader2, ShieldCheck, Truck, QrCode } from 'lucide-react'
+import { CheckCircle, Copy, Smartphone, Clock, AlertTriangle, Download, Loader2, ShieldCheck, Truck } from 'lucide-react'
 import { upiLink, UPI_APPS, isPhone, isIOS, orderNote, rememberPhone, recallPhone, needsPayment } from '../utils/upi'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
@@ -29,27 +29,25 @@ function PayBox({ order }) {
   const amount = rupees(order.totalAmount)
   const link = upiLink(pay)
   const [qr, setQr] = useState('')
-  const [showQr, setShowQr] = useState(!phone)
 
   useEffect(() => {
     QRCode.toDataURL(link, { width: 560, margin: 1, errorCorrectionLevel: 'M' }).then(setQr).catch(() => setQr(''))
   }, [link])
 
-  const qrBlock = (
-    <div className="flex flex-col items-center">
-      <div className="bg-white p-3 rounded-2xl border border-gray-200 shadow-sm">
-        {qr
-          ? <img src={qr} alt={`UPI QR code to pay ${rupees(order.totalAmount)} to ${pay.payeeName}`} width="240" height="240" className="w-56 h-56 sm:w-60 sm:h-60" />
-          : <div className="w-56 h-56 sm:w-60 sm:h-60 flex items-center justify-center"><Loader2 className="animate-spin text-gray-300" /></div>}
-      </div>
-      <p className="text-sm text-gray-600 mt-3 text-center">Scan with <strong>GPay, PhonePe, Paytm, BHIM</strong> or any UPI app</p>
-      <p className="text-xs text-gray-500 mt-0.5 text-center">Then type {amount} as the amount</p>
-      {qr && (
-        <a href={qr} download={`HRK-Order-${order.orderId}-QR.png`} className="mt-2 inline-flex items-center gap-1 text-xs text-amber-700 hover:underline">
-          <Download size={13} /> Save QR image
-        </a>
-      )}
+  // Scanning a QR works even when "open the app" links are blocked by the UPI app,
+  // so on phones the QR comes first: save it, then scan it from the gallery.
+  const qrImage = (
+    <div className="bg-white p-3 rounded-2xl border border-gray-200 shadow-sm">
+      {qr
+        ? <img src={qr} alt={`UPI QR code to pay ${amount} to ${pay.payeeName}`} width="240" height="240" className="w-56 h-56 sm:w-60 sm:h-60" />
+        : <div className="w-56 h-56 sm:w-60 sm:h-60 flex items-center justify-center"><Loader2 className="animate-spin text-gray-300" /></div>}
     </div>
+  )
+  const saveQr = qr && (
+    <a href={qr} download={`HRK-Order-${order.orderId}-QR.png`}
+      className="btn-gold w-full py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+      <Download size={17} /> Save QR to your phone
+    </a>
   )
 
   return (
@@ -68,28 +66,43 @@ function PayBox({ order }) {
         <CopyButton text={String(order.totalAmount)} label="Copy amount" />
       </div>
 
-      {phone && (
-        <div className="space-y-2.5 mb-4">
-          <a href={link} className="btn-gold w-full py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
-            <Smartphone size={17} /> Open UPI app to pay
-          </a>
-          <div className="grid grid-cols-3 gap-2">
-            {UPI_APPS.map(app => (
-              <a key={app.name} href={app.link(pay)}
-                className="border border-gray-200 rounded-xl py-2.5 text-xs font-medium text-gray-700 text-center hover:border-amber-400 hover:bg-amber-50">
-                {app.name}
-              </a>
-            ))}
+      {phone ? (
+        <>
+          <div className="flex flex-col items-center">{qrImage}</div>
+          <div className="mt-4 space-y-3">
+            {saveQr}
+            <ol className="text-sm text-gray-700 bg-gray-50 rounded-xl px-4 py-3 space-y-1.5 list-decimal pl-8">
+              <li>Tap <strong>Save QR to your phone</strong> above{isIOS() ? ' (or press and hold the QR → Save to Photos)' : ''}, or take a screenshot.</li>
+              <li>Open <strong>GPay, PhonePe, Paytm</strong> or any UPI app and tap <strong>Scan</strong>.</li>
+              <li>Tap the <strong>gallery / photo</strong> icon (Upload from gallery) and pick the saved QR.</li>
+              <li>Type <strong>{amount}</strong> and pay. Then come back here and tap <strong>I have paid</strong>.</li>
+            </ol>
+            <p className="text-xs text-gray-500 text-center pt-1">Or try opening your UPI app directly:</p>
+            <a href={link} className="w-full border border-gray-300 rounded-xl py-3 text-sm font-medium text-gray-700 flex items-center justify-center gap-2 hover:border-amber-400 hover:bg-amber-50">
+              <Smartphone size={16} /> Open UPI app to pay
+            </a>
+            <div className="grid grid-cols-3 gap-2">
+              {UPI_APPS.map(app => (
+                <a key={app.name} href={app.link(pay)}
+                  className="border border-gray-200 rounded-xl py-2.5 text-xs font-medium text-gray-700 text-center hover:border-amber-400 hover:bg-amber-50">
+                  {app.name}
+                </a>
+              ))}
+            </div>
           </div>
-          {isIOS() && <p className="text-xs text-gray-400 text-center">On iPhone, tap the app you have installed.</p>}
-          <button type="button" onClick={() => setShowQr(s => !s)}
-            className="w-full inline-flex items-center justify-center gap-1.5 text-sm text-gray-600 py-2 hover:text-gray-900">
-            <QrCode size={15} /> {showQr ? 'Hide QR code' : 'Paying from another phone? Show QR code'}
-          </button>
+        </>
+      ) : (
+        <div className="flex flex-col items-center">
+          {qrImage}
+          <p className="text-sm text-gray-600 mt-3 text-center">Scan with <strong>GPay, PhonePe, Paytm, BHIM</strong> or any UPI app</p>
+          <p className="text-xs text-gray-500 mt-0.5 text-center">Then type {amount} as the amount</p>
+          {qr && (
+            <a href={qr} download={`HRK-Order-${order.orderId}-QR.png`} className="mt-2 inline-flex items-center gap-1 text-xs text-amber-700 hover:underline">
+              <Download size={13} /> Save QR image
+            </a>
+          )}
         </div>
       )}
-
-      {showQr && qrBlock}
 
       <div className="mt-5 bg-gray-50 rounded-xl px-4 py-3 text-sm space-y-1.5">
         <div className="flex items-center justify-between gap-3">
