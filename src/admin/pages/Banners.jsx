@@ -150,7 +150,7 @@ function BannerModal({ banner, onClose, onSave }) {
                 ))}
               </div>
               {form.style === 'poster' && (
-                <p className="text-xs text-gray-500 mt-2">The whole poster is shown (never cropped) and opens the Button Link when tapped. Best sizes: laptop 1920 × 840, phone 1080 × 1640. The Title below is only used as the poster's name.</p>
+                <p className="text-xs text-gray-500 mt-2">The whole poster is shown (never cropped) and opens the Button Link when tapped. Best sizes: laptop 1920 × 840, phone 1080 × 1350. The Title below is only used as the poster's name.</p>
               )}
             </div>
           )}
@@ -435,12 +435,13 @@ export default function Banners() {
   }
 
   // Move a banner up or down: the website shows them in this order (1, 2, 3 …)
-  const move = async (index, dir) => {
-    const j = index + dir
-    if (j < 0 || j >= banners.length) return
-    const ids = banners.map(b => b._id); [ids[index], ids[j]] = [ids[j], ids[index]]
+  // Put the banner at place `to` (0 = shown first)
+  const moveTo = async (index, to) => {
+    if (to < 0 || to >= banners.length || to === index) return
+    const ids = banners.map(b => b._id); const [id] = ids.splice(index, 1); ids.splice(to, 0, id)
     setBanners(await api.reorderBanners(ids))
   }
+  const move = (index, dir) => moveTo(index, index + dir)
 
   const handleSave = async fd => {
     if (modal?._id) await api.updateBanner(modal._id, fd)
@@ -455,7 +456,7 @@ export default function Banners() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Banners</h1>
-            <p className="text-sm text-gray-500">Home page banners. They show in this order: use ↑ ↓ to choose 1st, 2nd, 3rd.</p>
+            <p className="text-sm text-gray-500">Home page banners. They show in this order: pick the number (1, 2, 3…) or use ↑ ↓ to choose which shows first.</p>
           </div>
           <button
             onClick={() => setModal({})}
@@ -498,7 +499,12 @@ export default function Banners() {
                 <div className="flex sm:flex-col items-center justify-center gap-1 px-3 py-2 sm:py-0 bg-gray-50 border-b sm:border-b-0 sm:border-r border-gray-100">
                   <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${banner.title} up`}
                     className="p-1.5 rounded-md hover:bg-white disabled:opacity-30"><ArrowUp size={15} /></button>
-                  <span className="text-lg font-bold text-gray-700 w-7 text-center" aria-label={`Position ${index + 1}`}>{index + 1}</span>
+                  <span className="sr-only" aria-label={`Position ${index + 1}`}>{index + 1}</span>
+                  <select value={index} onChange={e => moveTo(index, Number(e.target.value))} aria-label={`Show ${banner.title} as number`}
+                    title="Which number this banner shows as (1 = first)"
+                    className="w-12 text-center text-base font-bold text-gray-800 bg-white border border-gray-300 rounded-md py-1 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    {banners.map((_, i) => <option key={i} value={i}>{i + 1}</option>)}
+                  </select>
                   <button type="button" onClick={() => move(index, 1)} disabled={index === banners.length - 1} aria-label={`Move ${banner.title} down`}
                     className="p-1.5 rounded-md hover:bg-white disabled:opacity-30"><ArrowDown size={15} /></button>
                 </div>
