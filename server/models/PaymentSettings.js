@@ -6,6 +6,7 @@ const paymentSettingsSchema = new mongoose.Schema({
   key:       { type: String, default: 'main', unique: true },
   upiId:     { type: String, trim: true, lowercase: true, maxlength: 100, default: '' },   // e.g. hrkjewellery@okaxis
   payeeName: { type: String, trim: true, maxlength: 50, default: 'HRK Jewellery' },       // shown in the customer's UPI app
+  business:  { type: Boolean, default: false },   // a business/merchant UPI ID (PhonePe Business, Paytm for Business…): one-tap pay with the amount filled in
 }, { timestamps: true })
 
 module.exports = mongoose.model('PaymentSettings', paymentSettingsSchema)

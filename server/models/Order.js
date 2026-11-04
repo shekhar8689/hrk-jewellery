@@ -45,7 +45,7 @@ const orderSchema = new mongoose.Schema({
   // failed    = admin could not find the payment; customer can send the number again
   paymentStatus: { type: String, enum: ['pending', 'submitted', 'paid', 'failed'], default: 'pending' },
   upiRef:          { type: String, trim: true, default: '' },   // 12-digit UPI transaction number from the customer
-  payTo:           { upiId: String, payeeName: String },       // the UPI ID shown to the customer for this order
+  payTo:           { upiId: String, payeeName: String, business: Boolean },       // the UPI ID shown to the customer for this order
   paymentSubmittedAt: Date,
   paidAt:          Date,
   notes: { type: String, default: '' },

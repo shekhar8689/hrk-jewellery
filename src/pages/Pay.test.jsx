@@ -80,6 +80,21 @@ describe('Payment page', () => {
     expect(app.className).not.toMatch(/btn-gold/)
   })
 
+  test('business UPI ID: one-tap Pay button with the amount filled in, and the QR below it', async () => {
+    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 (Linux; Android 14)', configurable: true })
+    mockApi(order({ payTo: { upiId: 'q123456@ybl', payeeName: 'HRK Jewellery', business: true } }))
+    renderPay({ phone: '9876543210' })
+    const pay = await screen.findByRole('link', { name: /^Pay ₹1,709$/ })
+    expect(pay.getAttribute('href')).toMatch(/^upi:\/\/pay\?pa=q123456%40ybl/)
+    expect(pay.getAttribute('href')).toMatch(/am=1709\.00/)
+    expect(pay.className).toMatch(/btn-gold/)
+    for (const a of screen.getAllByRole('link').filter(l => /^(tez|phonepe|paytmmp):/.test(l.getAttribute('href') || ''))) expect(a.getAttribute('href')).toMatch(/am=1709\.00/)
+    await waitFor(() => expect(screen.getByAltText(/UPI QR code/)).toHaveAttribute('src', expect.stringMatching(/^data:image\/png/)))
+    expect(pay.compareDocumentPosition(screen.getByAltText(/UPI QR code/)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByText(/Upload from gallery/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/type ₹1,709/i)).not.toBeInTheDocument()
+  })
+
   test('opened on another device: asks for the phone number first', async () => {
     const calls = mockApi(order())
     renderPay(undefined)
