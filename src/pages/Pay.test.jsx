@@ -95,6 +95,15 @@ describe('Payment page', () => {
     expect(screen.queryByText(/type ₹1,709/i)).not.toBeInTheDocument()
   })
 
+  test('personal UPI ID on a phone: a second quick way, copy the UPI ID and pay it inside the app', async () => {
+    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 (Linux; Android 14)', configurable: true })
+    mockApi(order())
+    renderPay({ phone: '9876543210' })
+    expect(await screen.findByText(/Or pay to UPI ID/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Copy UPI ID/i })).toBeInTheDocument()
+    expect(screen.getByText(/Pay UPI ID or number/i)).toBeInTheDocument()
+  })
+
   test('opened on another device: asks for the phone number first', async () => {
     const calls = mockApi(order())
     renderPay(undefined)

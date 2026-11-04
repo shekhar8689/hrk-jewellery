@@ -108,6 +108,19 @@ function PayBox({ order }) {
               <li>Tap the <strong>gallery / photo</strong> icon (Upload from gallery) and pick the saved QR.</li>
               <li>Type <strong>{amount}</strong> and pay. Then come back here and tap <strong>I have paid</strong>.</li>
             </ol>
+            {/* Second quick way: type the UPI ID inside the app (works like scanning, nothing to save) */}
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3">
+              <p className="text-sm font-semibold text-gray-900 mb-2">Or pay to UPI ID (no QR needed)</p>
+              <div className="flex items-center justify-between gap-3 bg-white rounded-lg border border-gray-200 px-3 py-2 mb-2">
+                <span className="font-mono text-sm text-gray-900 truncate">{pay.upiId}</span>
+                <CopyButton text={pay.upiId} label="Copy UPI ID" />
+              </div>
+              <ol className="text-sm text-gray-700 space-y-1 list-decimal pl-5">
+                <li>Tap <strong>Copy UPI ID</strong>.</li>
+                <li>In GPay tap <strong>Pay UPI ID or number</strong> (PhonePe: <strong>To UPI ID</strong>) and paste it.</li>
+                <li>Your app shows the shop owner's bank name. Type <strong>{amount}</strong> and pay, then tap <strong>I have paid</strong> here.</li>
+              </ol>
+            </div>
             <p className="text-xs text-gray-500 text-center pt-1">Or try opening your UPI app directly:</p>
             <a href={link} className="w-full border border-gray-300 rounded-xl py-3 text-sm font-medium text-gray-700 flex items-center justify-center gap-2 hover:border-amber-400 hover:bg-amber-50">
               <Smartphone size={16} /> Open UPI app to pay
