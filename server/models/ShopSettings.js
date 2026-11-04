@@ -14,6 +14,8 @@ const shopSettingsSchema = new mongoose.Schema({
   instagram:   { type: String, trim: true, maxlength: 200, default: '' },
   facebook:    { type: String, trim: true, maxlength: 200, default: '' },
   youtube:     { type: String, trim: true, maxlength: 200, default: '' },
+  // Private: where the owner gets "new order" / "payment to check" emails. Never sent to the website.
+  alertEmail:  { type: String, trim: true, lowercase: true, maxlength: 120, default: '' },
 }, { timestamps: true })
 
 module.exports = mongoose.model('ShopSettings', shopSettingsSchema)
