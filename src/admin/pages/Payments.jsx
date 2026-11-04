@@ -18,7 +18,7 @@ export default function Payments() {
 
   useEffect(() => {
     api.getPaymentSettings()
-      .then(s => { setSaved(s); setForm({ upiId: s.upiId, payeeName: s.payeeName }) })
+      .then(s => { setSaved(s); setForm({ upiId: s.upiId, payeeName: s.payeeName, business: !!s.business }) })
       .catch(err => setError(err.message))
   }, [])
 
@@ -38,9 +38,11 @@ export default function Payments() {
     e.preventDefault()
     setSaving(true); setError(''); setNotice('')
     try {
-      const s = await api.updatePaymentSettings({ upiId, payeeName: form.payeeName })
-      setSaved(s); setForm({ upiId: s.upiId, payeeName: s.payeeName })
-      setNotice('Saved. Customers now pay to this UPI ID.')
+      const s = await api.updatePaymentSettings({ upiId, payeeName: form.payeeName, business: !!form.business })
+      setSaved(s); setForm({ upiId: s.upiId, payeeName: s.payeeName, business: !!s.business })
+      setNotice(s.business
+        ? 'Saved. Customers now pay this business UPI ID in one tap, with the amount filled in.'
+        : 'Saved. Customers now pay to this UPI ID (they scan the QR and type the amount).')
     } catch (err) { setError(err.message) }
     finally { setSaving(false) }
   }
@@ -75,6 +77,14 @@ export default function Payments() {
                 <input value={form.payeeName} maxLength={50} onChange={e => set('payeeName', e.target.value)} placeholder="HRK Jewellery" className={inputCls} />
                 <p className="text-xs text-gray-500 mt-1">Use the same name as the bank account, so customers trust the payment screen.</p>
               </div>
+
+              <label className="flex items-start gap-3 rounded-lg border border-gray-200 px-3 py-3 cursor-pointer hover:bg-amber-50/40">
+                <input type="checkbox" checked={!!form.business} onChange={e => set('business', e.target.checked)} className="mt-0.5 h-4 w-4 accent-amber-500" />
+                <span className="text-sm">
+                  <span className="font-medium text-gray-800">This is a business UPI ID</span>
+                  <span className="block text-xs text-gray-500 mt-0.5">From PhonePe Business, Paytm for Business, Google Pay for Business or BharatPe. Customers get a one-tap <strong>Pay</strong> button with the amount filled in, plus the QR. Leave it off for a personal UPI ID (those links get blocked), then customers scan the QR and type the amount. After switching on, place one test order from your phone.</span>
+                </span>
+              </label>
 
               {error && <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg"><AlertTriangle size={15} /> {error}</div>}
               {notice && <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm px-3 py-2 rounded-lg"><CheckCircle size={15} /> {notice}</div>}

@@ -20,7 +20,7 @@ describe('UPI settings', () => {
 
   test('admin saves the UPI ID; the public endpoint never shows it', async () => {
     const r = await auth(api().put('/api/payment')).send({ upiId: ' HRK@OKAXIS ', payeeName: 'HRK Jewellery' })
-    expect(r.body).toEqual({ upiId: 'hrk@okaxis', payeeName: 'HRK Jewellery', ready: true })
+    expect(r.body).toEqual({ upiId: 'hrk@okaxis', payeeName: 'HRK Jewellery', business: false, ready: true })
     expect((await api().get('/api/payment')).body).toEqual({ ready: true })
   })
 
@@ -33,6 +33,32 @@ describe('UPI settings', () => {
   })
 })
 
+describe('Business UPI ID', () => {
+  afterAll(() => PaymentSettings.updateOne({ key: 'main' }, { $set: { business: false } }))
+
+  test('admin can mark the UPI ID as a business one; only a real true switches it on', async () => {
+    let r = await auth(api().put('/api/payment')).send({ upiId: 'q123456@ybl', payeeName: 'HRK Jewellery', business: true })
+    expect(r.body).toEqual(expect.objectContaining({ upiId: 'q123456@ybl', business: true }))
+    expect((await auth(api().get('/api/payment/admin'))).body.business).toBe(true)
+    r = await auth(api().put('/api/payment')).send({ upiId: 'q123456@ybl', payeeName: 'HRK Jewellery', business: 'yes' })
+    expect(r.body.business).toBe(false)
+    r = await auth(api().put('/api/payment')).send({ upiId: 'q123456@ybl', payeeName: 'HRK Jewellery' })
+    expect(r.body.business).toBe(false)
+  })
+
+  test('the payment page is told whether the order pays a business UPI ID', async () => {
+    await auth(api().put('/api/payment')).send({ upiId: 'q123456@ybl', payeeName: 'HRK Jewellery', business: true })
+    const o = (await placeOrder({ product: await makeProduct() })).body
+    const t = await api().post('/api/orders/track').send({ orderId: shortId(o), phone: o.shippingAddress.phone })
+    expect(t.body.payTo).toEqual({ upiId: 'q123456@ybl', payeeName: 'HRK Jewellery', business: true })
+    // switching off later doesn't change an order already placed to the business ID
+    await auth(api().put('/api/payment')).send({ upiId: 'q123456@ybl', payeeName: 'HRK Jewellery', business: false })
+    const o2 = (await placeOrder({ product: await makeProduct() })).body
+    const t2 = await api().post('/api/orders/track').send({ orderId: shortId(o2), phone: o2.shippingAddress.phone })
+    expect(t2.body.payTo.business).toBe(false)
+  })
+})
+
 describe('Paying for an order', () => {
   beforeAll(() => setUpi('shop@okaxis', 'HRK Jewellery'))
 
@@ -40,7 +66,7 @@ describe('Paying for an order', () => {
     const o = (await placeOrder({ product: await makeProduct() })).body
     await setUpi('newshop@ybl')
     const t = await api().post('/api/orders/track').send({ orderId: shortId(o), phone: o.shippingAddress.phone })
-    expect(t.body.payTo).toEqual({ upiId: 'shop@okaxis', payeeName: 'HRK Jewellery' })
+    expect(t.body.payTo).toEqual({ upiId: 'shop@okaxis', payeeName: 'HRK Jewellery', business: false })
     await setUpi('shop@okaxis')
   })
 

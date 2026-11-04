@@ -1,7 +1,7 @@
 const PaymentSettings = require('../models/PaymentSettings')
 const { UPI_ID_RE, PAYEE_RE, getPaymentSettings, upiReady } = require('../utils/upi')
 
-const shape = s => ({ upiId: s.upiId || '', payeeName: s.payeeName || 'HRK Jewellery', ready: upiReady(s) })
+const shape = s => ({ upiId: s.upiId || '', payeeName: s.payeeName || 'HRK Jewellery', business: s.business === true, ready: upiReady(s) })
 
 // ── GET /api/payment  (public) — is online payment set up? ───────────────────
 exports.getPublic = async (_req, res) => {
@@ -34,6 +34,7 @@ exports.update = async (req, res) => {
     const doc = (await PaymentSettings.findOne({ key: 'main' })) || new PaymentSettings({ key: 'main' })
     doc.upiId = upiId
     doc.payeeName = payeeName
+    doc.business = req.body.business === true
     await doc.save()
     res.json(shape(doc.toObject()))
   } catch (err) {

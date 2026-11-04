@@ -24,8 +24,10 @@ function CopyButton({ text, label = 'Copy' }) {
 // ── Step 1: pay ──────────────────────────────────────────────────────────────
 function PayBox({ order }) {
   const phone = isPhone()
-  // Temporary (until Razorpay): the amount is NOT put in the link or QR; the customer types it
-  const pay = { upiId: order.payTo.upiId, payeeName: order.payTo.payeeName, note: orderNote(order.orderId) }
+  // Business (merchant) UPI ID: one-tap pay with the amount filled in.
+  // Personal UPI ID: the amount is left out (apps block those links with it) and the customer types it.
+  const business = order.payTo.business === true
+  const pay = { upiId: order.payTo.upiId, payeeName: order.payTo.payeeName, note: orderNote(order.orderId), amount: business ? order.totalAmount : undefined }
   const amount = rupees(order.totalAmount)
   const link = upiLink(pay)
   const [qr, setQr] = useState('')
@@ -58,15 +60,44 @@ function PayBox({ order }) {
       </div>
 
       {/* The exact amount to type in the UPI app */}
-      <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-center justify-between gap-3">
+      {!business && <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs text-amber-800">In your UPI app, type ₹{Number(order.totalAmount).toLocaleString('en-IN')} as the amount</p>
           <p className="text-2xl font-bold text-gray-900 tracking-tight">{amount}</p>
         </div>
         <CopyButton text={String(order.totalAmount)} label="Copy amount" />
-      </div>
+      </div>}
 
-      {phone ? (
+      {business ? (
+        <>
+          {phone && (
+            <div className="space-y-2.5 mb-5">
+              <a href={link} className="btn-gold w-full py-4 rounded-xl text-base font-bold flex items-center justify-center gap-2">
+                <Smartphone size={18} aria-hidden="true" />Pay {amount}
+              </a>
+              <div className="grid grid-cols-3 gap-2">
+                {UPI_APPS.map(app => (
+                  <a key={app.name} href={app.link(pay)}
+                    className="border border-gray-200 rounded-xl py-2.5 text-xs font-medium text-gray-700 text-center hover:border-amber-400 hover:bg-amber-50">
+                    {app.name}
+                  </a>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 text-center">Your UPI app opens with {amount} filled in. Enter your UPI PIN, then come back and tap <strong>I have paid</strong>.</p>
+            </div>
+          )}
+          <div className="flex flex-col items-center">
+            {phone && <p className="text-xs text-gray-500 mb-2">Or scan this QR from another phone</p>}
+            {qrImage}
+            {!phone && <p className="text-sm text-gray-600 mt-3 text-center">Scan with <strong>GPay, PhonePe, Paytm, BHIM</strong> or any UPI app. {amount} fills in by itself.</p>}
+            {qr && (
+              <a href={qr} download={`HRK-Order-${order.orderId}-QR.png`} className="mt-2 inline-flex items-center gap-1 text-xs text-amber-700 hover:underline">
+                <Download size={13} /> Save QR image
+              </a>
+            )}
+          </div>
+        </>
+      ) : phone ? (
         <>
           <div className="flex flex-col items-center">{qrImage}</div>
           <div className="mt-4 space-y-3">

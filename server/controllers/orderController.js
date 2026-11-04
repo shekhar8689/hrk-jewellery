@@ -305,7 +305,7 @@ exports.create = async (req, res) => {
       totalAmount:   total,
       paymentMethod: 'upi',
       paymentStatus: 'pending',   // set to paid by the admin after checking the bank
-      payTo:         { upiId: paySettings.upiId, payeeName: paySettings.payeeName },
+      payTo:         { upiId: paySettings.upiId, payeeName: paySettings.payeeName, business: paySettings.business === true },
       statusHistory: [{ status: 'pending', at: new Date() }],
       notes: notes ? String(notes).slice(0, 500) : '',
     }
@@ -443,7 +443,7 @@ async function customerView(order) {
   let payTo = null
   if (awaitingPayment) {
     payTo = order.payTo?.upiId ? order.payTo : null
-    if (!payTo) { const s = await getPaymentSettings(); if (upiReady(s)) payTo = { upiId: s.upiId, payeeName: s.payeeName } }
+    if (!payTo) { const s = await getPaymentSettings(); if (upiReady(s)) payTo = { upiId: s.upiId, payeeName: s.payeeName, business: s.business === true } }
   }
   return {
       orderId:        String(order._id).slice(-8).toUpperCase(),
@@ -459,7 +459,7 @@ async function customerView(order) {
       paymentMethod:  order.paymentMethod,
       paymentStatus:  order.paymentStatus,
       upiRef:         order.upiRef || '',
-      payTo:          payTo ? { upiId: payTo.upiId, payeeName: payTo.payeeName } : null,
+      payTo:          payTo ? { upiId: payTo.upiId, payeeName: payTo.payeeName, business: payTo.business === true } : null,
       payBy:          awaitingPayment ? new Date(new Date(order.createdAt).getTime() + PAY_WITHIN_HOURS * 3600 * 1000) : null,
       courier:        order.courier || '',
       trackingNumber: order.trackingNumber || '',
