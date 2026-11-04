@@ -18,8 +18,8 @@ export const products = [
     reviews: 312,
     isNew: true,
     isBestseller: false,
-    material: '18K Gold Plated',
-    description: 'A timeless solitaire ring featuring a brilliant-cut crystal set in 18K gold-plated brass. Tarnish-free and water-resistant.',
+    material: 'Gold-tone · Anti-tarnish',
+    description: 'A timeless solitaire ring featuring a brilliant-cut crystal in anti-tarnish, hypoallergenic metal.',
     images: [
       'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80',
       'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80',
@@ -37,7 +37,7 @@ export const products = [
     reviews: 521,
     isNew: false,
     isBestseller: true,
-    material: '18K Gold Plated',
+    material: 'Gold-tone · Anti-tarnish',
     description: 'Delicate layered necklace with a dainty star and crescent charm. Perfect for everyday wear.',
     images: [
       'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=80',
@@ -75,7 +75,7 @@ export const products = [
     reviews: 274,
     isNew: true,
     isBestseller: false,
-    material: '18K Gold Plated',
+    material: 'Gold-tone · Anti-tarnish',
     description: 'A dainty bracelet adorned with moon and star charms. Adjustable length, perfect for stacking.',
     images: [
       'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=600&q=80',
@@ -94,7 +94,7 @@ export const products = [
     reviews: 445,
     isNew: false,
     isBestseller: true,
-    material: '18K Gold Plated',
+    material: 'Gold-tone · Anti-tarnish',
     description: 'A beautifully twisted band ring that catches light from every angle. Minimalist yet striking.',
     images: [
       'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80',
@@ -113,7 +113,7 @@ export const products = [
     reviews: 156,
     isNew: true,
     isBestseller: false,
-    material: '18K Gold Plated',
+    material: 'Gold-tone · Anti-tarnish',
     description: 'Minimalist anklet with tiny star charms. Waterproof and adjustable.',
     images: [
       'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&q=80',
@@ -132,7 +132,7 @@ export const products = [
     reviews: 632,
     isNew: false,
     isBestseller: true,
-    material: '18K Gold Plated',
+    material: 'Gold-tone · Anti-tarnish',
     description: 'Delicate flower stud earrings with pearl center. Hypoallergenic posts.',
     images: [
       'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80',
@@ -151,7 +151,7 @@ export const products = [
     reviews: 389,
     isNew: false,
     isBestseller: false,
-    material: '18K Gold Plated',
+    material: 'Gold-tone · Anti-tarnish',
     description: 'Classic tennis bracelet with CZ stones set in a continuous row. A wardrobe essential.',
     images: [
       'https://images.unsplash.com/photo-1573408301185-9519f94816b5?w=600&q=80',
@@ -189,7 +189,7 @@ export const products = [
     reviews: 203,
     isNew: false,
     isBestseller: false,
-    material: '18K Gold Plated',
+    material: 'Gold-tone · Anti-tarnish',
     description: 'An elegant ring featuring a freshwater pearl set on a sleek gold band.',
     images: [
       'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80',
@@ -208,7 +208,7 @@ export const products = [
     reviews: 121,
     isNew: false,
     isBestseller: false,
-    material: '18K Gold Plated',
+    material: 'Gold-tone · Anti-tarnish',
     description: 'Dual-layer anklet with micro beads and a celestial charm.',
     images: [
       'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&q=80',
@@ -226,7 +226,7 @@ export const products = [
     reviews: 478,
     isNew: false,
     isBestseller: true,
-    material: '18K Gold Plated',
+    material: 'Gold-tone · Anti-tarnish',
     description: 'Classic thick hoops with a hammered finish. Lightweight for all-day comfort.',
     images: [
       'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80',

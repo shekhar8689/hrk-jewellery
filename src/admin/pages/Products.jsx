@@ -155,7 +155,7 @@ function ProductModal({ product, onClose, onSave }) {
               <label className="block text-sm font-medium text-gray-700 mb-1">Material</label>
               <input
                 value={form.material} onChange={e => set('material', e.target.value)}
-                placeholder="e.g. 18K Gold Plated"
+                placeholder="e.g. Gold-tone · Anti-tarnish"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
