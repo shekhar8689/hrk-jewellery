@@ -18,6 +18,9 @@ const bannerSchema = new mongoose.Schema({
   link: { type: String, default: '/collections' },
   isActive: { type: Boolean, default: true },
   order: { type: Number, default: 0 },
+  // 'text': the site writes the title and buttons over the photo.
+  // 'poster': the picture already has its text; shown whole, no shading, the whole poster is a link.
+  style: { type: String, enum: ['text', 'poster'], default: 'text' },
 }, { timestamps: true })
 
 module.exports = mongoose.model('Banner', bannerSchema)

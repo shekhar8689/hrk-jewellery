@@ -49,3 +49,15 @@ test('if the server answers with an error, the shop name stays', async () => {
   await waitFor(() => expect(fetch).toHaveBeenCalled())
   expect(screen.getByRole('heading', { name: /Crafted for/ })).toBeInTheDocument()
 })
+
+test('a poster banner shows the whole picture, no title or dark shading on top, and the whole poster is a link', async () => {
+  show()
+  resolveFetch([banner({ title: 'Combo of 4', style: 'poster', link: '/product/abc', cta: 'Shop the combo' })])
+  const link = await screen.findByRole('link', { name: /Combo of 4/ })
+  expect(link.getAttribute('href')).toBe('/product/abc')
+  expect(screen.queryByRole('heading', { name: 'Combo of 4' })).not.toBeInTheDocument()
+  const img = document.querySelector('picture img')
+  expect(img.className).toMatch(/object-contain/)
+  expect(document.querySelector('.bg-gradient-to-t')).toBeNull()
+  expect(screen.getByText('Shop the combo')).toBeInTheDocument()
+})
