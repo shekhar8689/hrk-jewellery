@@ -75,7 +75,7 @@ export default function Contact() {
           <div className="mt-10 bg-amber-50 border border-amber-200 rounded-2xl p-5">
             <p className="text-sm font-semibold text-amber-800 mb-1">Quick responses for order issues</p>
             <p className="text-xs text-amber-700">
-              For order-related queries, please include your Order ID (and UPI transaction number if you have paid). We resolve most issues within 1 business day.
+              For order-related queries, please include your Order ID (and the date and time you paid, if you have). We resolve most issues within 1 business day.
             </p>
           </div>
         </div>

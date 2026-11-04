@@ -4,8 +4,10 @@
  */
 const enc = encodeURIComponent
 
+// No amount → the customer types it in their UPI app. (Links to a personal UPI ID
+// with a filled-in amount are often blocked by GPay / banks with a "bank limit" error.)
 const params = ({ upiId, payeeName, amount, note }) =>
-  `pa=${enc(upiId)}&pn=${enc(payeeName || '')}&am=${Number(amount).toFixed(2)}&cu=INR&tn=${enc((note || '').slice(0, 50))}`
+  `pa=${enc(upiId)}&pn=${enc(payeeName || '')}${amount == null ? '' : `&am=${Number(amount).toFixed(2)}`}&cu=INR&tn=${enc((note || '').slice(0, 50))}`
 
 // Works with every UPI app (Android shows a list of apps to choose from)
 export const upiLink = p => `upi://pay?${params(p)}`

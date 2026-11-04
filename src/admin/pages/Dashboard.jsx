@@ -29,7 +29,7 @@ function TodoPanel({ todo }) {
   if (!todo) return null
   const items = [
     todo.paymentsToCheck > 0 && { to: '/admin/orders?payment=submitted', icon: IndianRupee, cls: 'bg-orange-50 border-orange-200 text-orange-800',
-      text: `${todo.paymentsToCheck} payment${todo.paymentsToCheck > 1 ? 's' : ''} to check`, hint: 'Find the transaction number in your bank / UPI app, then mark received' },
+      text: `${todo.paymentsToCheck} payment${todo.paymentsToCheck > 1 ? 's' : ''} to check`, hint: 'Find the amount in your bank / UPI app, then mark received' },
     todo.paidToConfirm > 0 && { to: '/admin/orders?payment=paid&status=pending', icon: Package, cls: 'bg-blue-50 border-blue-200 text-blue-800',
       text: `${todo.paidToConfirm} paid order${todo.paidToConfirm > 1 ? 's' : ''} to confirm & pack`, hint: 'Confirm, pack, then ship with the courier details' },
     todo.messages > 0 && { to: '/admin/messages', icon: MessageSquare, cls: 'bg-purple-50 border-purple-200 text-purple-800',

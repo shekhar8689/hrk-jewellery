@@ -93,7 +93,7 @@ function OrderCard({ order, onCancel, cancelling }) {
           <p className="text-sm text-amber-900 flex-1">
             <strong>Waiting for payment.</strong>{' '}
             {order.paymentStatus === 'failed'
-              ? "We couldn't find your UPI payment. Please check and send the transaction number again."
+              ? "We couldn't find your UPI payment yet. Please pay again, or contact us if you already paid."
               : 'Pay by UPI within 24 hours of ordering, or the order is cancelled.'}
           </p>
           <Link to={`/pay?id=${orderId}`} state={{ phone: order.shippingAddress?.phone }}

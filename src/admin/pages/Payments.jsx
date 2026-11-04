@@ -97,10 +97,10 @@ export default function Payments() {
         <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-900 space-y-2">
           <p className="font-semibold flex items-center gap-1.5"><Info size={15} /> How orders are paid</p>
           <ol className="list-decimal pl-5 space-y-1">
-            <li>The customer places the order and sees a QR code for the exact amount (on a phone: a "Pay with UPI app" button).</li>
-            <li>After paying, they type the 12-digit UPI transaction number. The order shows <strong>Payment to check</strong> in Orders.</li>
-            <li>Open your bank or UPI app and find that number and amount. Then click <strong>Payment received</strong> on the order, and confirm and ship it.</li>
-            <li>If the money isn't there, click <strong>Not received</strong>. The customer is asked to check and send the number again.</li>
+            <li>The customer places the order and sees your QR code (on a phone: an "Open UPI app" button). They type the exact amount in their UPI app; the payment note says "HRK Order" and the order number.</li>
+            <li>After paying, they tap <strong>I have paid</strong>. The order shows <strong>Payment to check</strong> in Orders, and you get an email.</li>
+            <li>Open your bank or UPI app and find that amount (and note or name). Then click <strong>Payment received</strong> on the order, and confirm and ship it.</li>
+            <li>If the money isn't there, click <strong>Not received</strong>. The customer is asked to pay again or contact you.</li>
           </ol>
           <p>Orders nobody pays for are cancelled after 24 hours and their stock goes back.</p>
           <p><strong>Tip:</strong> use a free business UPI ID (PhonePe Business, Paytm for Business or Google Pay for Business). Personal UPI IDs have daily limits, and some apps block payments to them from website buttons.</p>

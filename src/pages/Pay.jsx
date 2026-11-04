@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { CheckCircle, Copy, Smartphone, Clock, AlertTriangle, Download, Loader2, ShieldCheck, Truck, QrCode } from 'lucide-react'
-import { checkUtr } from '../utils/utr'
 import { upiLink, UPI_APPS, isPhone, isIOS, orderNote, rememberPhone, recallPhone, needsPayment } from '../utils/upi'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
@@ -25,7 +24,9 @@ function CopyButton({ text, label = 'Copy' }) {
 // ── Step 1: pay ──────────────────────────────────────────────────────────────
 function PayBox({ order }) {
   const phone = isPhone()
-  const pay = { upiId: order.payTo.upiId, payeeName: order.payTo.payeeName, amount: order.totalAmount, note: orderNote(order.orderId) }
+  // Temporary (until Razorpay): the amount is NOT put in the link or QR; the customer types it
+  const pay = { upiId: order.payTo.upiId, payeeName: order.payTo.payeeName, note: orderNote(order.orderId) }
+  const amount = rupees(order.totalAmount)
   const link = upiLink(pay)
   const [qr, setQr] = useState('')
   const [showQr, setShowQr] = useState(!phone)
@@ -42,7 +43,7 @@ function PayBox({ order }) {
           : <div className="w-56 h-56 sm:w-60 sm:h-60 flex items-center justify-center"><Loader2 className="animate-spin text-gray-300" /></div>}
       </div>
       <p className="text-sm text-gray-600 mt-3 text-center">Scan with <strong>GPay, PhonePe, Paytm, BHIM</strong> or any UPI app</p>
-      <p className="text-xs text-gray-400 mt-0.5 text-center">The amount {rupees(order.totalAmount)} fills in by itself</p>
+      <p className="text-xs text-gray-500 mt-0.5 text-center">Then type {amount} as the amount</p>
       {qr && (
         <a href={qr} download={`HRK-Order-${order.orderId}-QR.png`} className="mt-2 inline-flex items-center gap-1 text-xs text-amber-700 hover:underline">
           <Download size={13} /> Save QR image
@@ -58,10 +59,19 @@ function PayBox({ order }) {
         <h2 className="font-semibold text-gray-900">Pay {rupees(order.totalAmount)} by UPI</h2>
       </div>
 
+      {/* The exact amount to type in the UPI app */}
+      <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs text-amber-800">In your UPI app, type ₹{Number(order.totalAmount).toLocaleString('en-IN')} as the amount</p>
+          <p className="text-2xl font-bold text-gray-900 tracking-tight">{amount}</p>
+        </div>
+        <CopyButton text={String(order.totalAmount)} label="Copy amount" />
+      </div>
+
       {phone && (
         <div className="space-y-2.5 mb-4">
           <a href={link} className="btn-gold w-full py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
-            <Smartphone size={17} /> Pay {rupees(order.totalAmount)} with UPI app
+            <Smartphone size={17} /> Open UPI app to pay
           </a>
           <div className="grid grid-cols-3 gap-2">
             {UPI_APPS.map(app => (
@@ -98,25 +108,24 @@ function PayBox({ order }) {
         </div>
       </div>
       <p className="text-xs text-gray-400 mt-2">Please pay the exact amount, so we can match your payment quickly.</p>
+      <p className="text-xs text-gray-400 mt-1">Paying {pay.payeeName}. Your payment note says "{pay.note}".</p>
     </div>
   )
 }
 
-// ── Step 2: send the transaction number ──────────────────────────────────────
-function RefForm({ order, phone, onDone, onCancelEdit }) {
-  const [utr, setUtr] = useState('')
+// ── Step 2: tell us you've paid ──────────────────────────────────────────────
+// Temporary (until Razorpay): no transaction number to type. The shop finds the
+// payment in its bank app by amount and the note "HRK Order XXXX".
+function PaidButton({ order, phone, onDone }) {
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
 
   const submit = async e => {
-    e.preventDefault(); setError('')
-    const checked = checkUtr(utr)
-    if (checked.error) return setError(checked.error)
-    setSending(true)
+    e.preventDefault(); setError(''); setSending(true)
     try {
       const res = await fetch(`${API}/orders/upi-ref`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order.orderId, phone, utr: checked.utr }),
+        body: JSON.stringify({ orderId: order.orderId, phone }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Could not send. Please try again.')
@@ -129,28 +138,15 @@ function RefForm({ order, phone, onDone, onCancelEdit }) {
     <form onSubmit={submit} className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6">
       <div className="flex items-center gap-3 mb-2">
         <span className="w-7 h-7 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">2</span>
-        <h2 className="font-semibold text-gray-900">After paying, enter the transaction number</h2>
+        <h2 className="font-semibold text-gray-900">Paid? Tell us</h2>
       </div>
-      <p className="text-sm text-gray-500 mb-3">
-        Open the payment in your UPI app (History → this payment) and copy the <strong>12-digit number</strong>. It is the same number your bank and ours show.
+      <p className="text-sm text-gray-500 mb-4">
+        When your UPI app shows the payment was successful, tap the button. We check it and confirm your order.
       </p>
-      <ul className="text-xs text-gray-600 bg-gray-50 rounded-xl px-4 py-3 mb-4 space-y-1">
-        <li><strong>Google Pay:</strong> "UPI transaction ID" (not the Google transaction ID)</li>
-        <li><strong>PhonePe:</strong> "UTR" (not the Transaction ID starting with T)</li>
-        <li><strong>Paytm:</strong> "UPI Ref No."</li>
-        <li><strong>BHIM / bank apps:</strong> "UPI Ref No." or "RRN"</li>
-      </ul>
-      <label htmlFor="utr" className="block text-xs uppercase tracking-wider text-gray-500 mb-1.5">UPI transaction number</label>
-      <div className="flex flex-col sm:flex-row gap-2">
-        <input id="utr" inputMode="numeric" autoComplete="off" value={utr} placeholder="12 digits, e.g. 412345678901" maxLength={40}
-          onChange={e => { setUtr(e.target.value); setError('') }}
-          className="flex-1 min-w-0 border border-gray-200 rounded-xl px-4 py-3 text-base font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-amber-400" />
-        <button type="submit" disabled={sending} className="btn-gold px-6 py-3 rounded-xl text-sm font-bold disabled:opacity-60 inline-flex items-center justify-center gap-2">
-          {sending && <Loader2 size={15} className="animate-spin" />} I have paid
-        </button>
-      </div>
+      <button type="submit" disabled={sending} className="btn-gold w-full py-4 rounded-xl text-sm font-bold disabled:opacity-60 inline-flex items-center justify-center gap-2">
+        {sending && <Loader2 size={15} className="animate-spin" />} I have paid {rupees(order.totalAmount)}
+      </button>
       {error && <p role="alert" className="text-sm text-red-600 mt-2">{error}</p>}
-      {onCancelEdit && <button type="button" onClick={onCancelEdit} className="text-xs text-gray-500 hover:underline mt-3">Keep the number I sent before</button>}
     </form>
   )
 }
@@ -166,7 +162,6 @@ export default function Pay() {
   const [order, setOrder]     = useState(null)
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
-  const [editing, setEditing] = useState(false)
 
   useEffect(() => { document.title = 'Complete Payment — HRK Jewellery'; return () => { document.title = 'HRK Jewellery' } }, [])
 
@@ -240,7 +235,7 @@ export default function Pay() {
 
       {order.status === 'cancelled' && (
         <div className="bg-red-50 border border-red-100 text-red-700 rounded-2xl p-4 text-sm">
-          This order was cancelled{order.paymentStatus === 'paid' ? '' : ' because it was not paid in time'}. If you have already paid, please <Link to="/contact" className="underline">contact us</Link> with your Order ID and UPI transaction number.
+          This order was cancelled{order.paymentStatus === 'paid' ? '' : ' because it was not paid in time'}. If you have already paid, please <Link to="/contact" className="underline">contact us</Link> with your Order ID.
         </div>
       )}
 
@@ -249,11 +244,11 @@ export default function Pay() {
           {order.paymentStatus === 'failed' && (
             <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-4 text-sm flex gap-2">
               <AlertTriangle size={17} className="shrink-0 mt-0.5" />
-              <span>We couldn't find a payment with transaction number <span className="font-mono">{order.upiRef}</span>. Please check the number and send it again, or pay below if you haven't yet.</span>
+              <span>We couldn't find your payment of {rupees(order.totalAmount)} yet. If you haven't paid, please pay below. If you have, please <Link to="/contact" className="underline">contact us</Link> with your Order ID.</span>
             </div>
           )}
           <PayBox order={order} />
-          <RefForm order={order} phone={phone} onDone={setOrder} />
+          <PaidButton order={order} phone={phone} onDone={setOrder} />
           {order.payBy && (
             <p className="text-xs text-gray-500 flex items-center justify-center gap-1.5 text-center">
               <Clock size={13} /> Please pay by {fmtDate(order.payBy)}. Unpaid orders are cancelled after that.
@@ -268,21 +263,17 @@ export default function Pay() {
         </div>
       )}
 
-      {submitted && !editing && (
+      {submitted && (
         <div className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 text-center">
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
             <CheckCircle size={34} className="text-green-500" />
           </div>
           <h2 className="font-semibold text-gray-900 text-lg">Thank you! We're checking your payment</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Transaction number <span className="font-mono text-gray-800">{order.upiRef}</span> · {rupees(order.totalAmount)}
+            {order.upiRef ? <>Transaction number <span className="font-mono text-gray-800">{order.upiRef}</span> · </> : null}{rupees(order.totalAmount)}
           </p>
           <p className="text-sm text-gray-600 mt-3">We'll confirm your order as soon as the payment shows in our account, usually within a few hours. Then we pack and ship your jewellery.</p>
-          <button type="button" onClick={() => setEditing(true)} className="text-xs text-gray-500 hover:underline mt-3">Typed the wrong number? Change it</button>
         </div>
-      )}
-      {submitted && editing && (
-        <RefForm order={order} phone={phone} onDone={o => { setOrder(o); setEditing(false) }} onCancelEdit={() => setEditing(false)} />
       )}
 
       {paid && order.status !== 'cancelled' && (

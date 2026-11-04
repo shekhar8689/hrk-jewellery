@@ -57,7 +57,7 @@ const notifyNewOrder = order => send(() => {
   return {
     subject: `🛍️ New order #${shortId(order)} · ${rupees(order.totalAmount)}`,
     text: `New order #${shortId(order)} for ${rupees(order.totalAmount)} from ${order.shippingAddress?.name}. Waiting for UPI payment. ${url}`,
-    html: layout('New order placed', 'The customer is now paying by UPI. You get another email when they send the transaction number.',
+    html: layout('New order placed', 'The customer is now paying by UPI. You get another email when they tap "I have paid".',
       order, '<tr><td style="color:#666;padding:3px 0">Payment</td><td style="text-align:right">Waiting for UPI payment</td></tr>',
       { href: url, label: 'Open Orders' }),
   }
@@ -65,6 +65,18 @@ const notifyNewOrder = order => send(() => {
 
 const notifyPaymentSubmitted = order => send(() => {
   const url = `${email.siteUrl()}/admin/orders?payment=submitted`
+  if (!order.upiRef) {
+    // Customer tapped "I have paid" without a transaction number
+    const note = `HRK Order ${shortId(order)}`, a = order.shippingAddress || {}
+    return {
+      subject: `💰 Payment to check · #${shortId(order)} · ${rupees(order.totalAmount)}`,
+      text: `Order #${shortId(order)}: ${a.name} (${a.phone}) says they paid ${rupees(order.totalAmount)} by UPI. Find a payment of ${rupees(order.totalAmount)} with note "${note}" in your bank/UPI app, then mark Payment received. ${url}`,
+      html: layout('Payment to check', `The customer says they paid. In your bank or UPI app, find a payment of <b>${rupees(order.totalAmount)}</b> with the note <b>${esc(note)}</b> (or from <b>${esc(a.name)}</b>). Then click <b>Payment received</b> on the order.`,
+        order, `<tr><td style="color:#666;padding:3px 0">Payment note</td><td style="text-align:right"><b>${esc(note)}</b></td></tr>
+  <tr><td style="color:#666;padding:3px 0">Told us at</td><td style="text-align:right">${esc(new Date(order.paymentSubmittedAt || Date.now()).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))}</td></tr>`,
+        { href: url, label: 'Check payment' }),
+    }
+  }
   return {
     subject: `💰 Payment to check · #${shortId(order)} · ${rupees(order.totalAmount)}`,
     text: `Order #${shortId(order)}: customer paid ${rupees(order.totalAmount)}, UPI Ref ${order.upiRef}. Check your bank/UPI app, then mark Payment received. ${url}`,

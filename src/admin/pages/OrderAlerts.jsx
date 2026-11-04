@@ -37,7 +37,7 @@ export default function OrderAlerts() {
     <section className="bg-white rounded-xl border border-gray-100 p-5 space-y-3">
       <h2 className="font-semibold text-gray-900 flex items-center gap-2"><Bell size={16} /> Order alerts</h2>
       <p className="text-sm text-gray-500">
-        Get an email for every <strong>new order</strong> and when a customer sends their <strong>UPI transaction number</strong> (payment to check).
+        Get an email for every <strong>new order</strong> and when a customer taps <strong>I have paid</strong> (payment to check).
         {saved ? <> Alerts go to <strong>{saved}</strong>.</> : <> Alerts are off. Add an email to turn them on.</>}
       </p>
       <div>

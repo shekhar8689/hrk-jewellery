@@ -474,12 +474,15 @@ async function customerView(order) {
 }
 
 // ── POST /api/orders/upi-ref  (public) ────────────────────────────────────────
-// After paying, the customer enters the 12-digit UPI transaction number
-// (UTR / UPI Ref No.) so the shop can match the payment in its bank app.
+// After paying, the customer taps "I have paid". For now the 12-digit UPI
+// transaction number (UTR) is optional: the shop finds the payment in its bank
+// app by amount and the note "HRK Order XXXX". (Temporary until Razorpay.)
 exports.submitUpiRef = async (req, res) => {
   try {
-    const utr = String(req.body.utr || '').replace(/\s/g, '')
-    if (!UTR_RE.test(utr))
+    const raw = req.body.utr
+    if (raw != null && typeof raw !== 'string') return res.status(400).json({ message: 'Enter the 12-digit UPI transaction number (UTR / UPI Ref No.) from your payment app' })
+    const utr = String(raw || '').replace(/\s/g, '')
+    if (utr && !UTR_RE.test(utr))
       return res.status(400).json({ message: 'Enter the 12-digit UPI transaction number (UTR / UPI Ref No.) from your payment app' })
     const found = await findCustomerOrder(req.body, false)
     if (found.error) return res.status(found.status).json({ message: found.error })
@@ -489,10 +492,10 @@ exports.submitUpiRef = async (req, res) => {
     if (order.paymentStatus === 'paid') return res.status(400).json({ message: 'We have already received the payment for this order.' })
 
     // One payment can only pay for one order
-    const usedElsewhere = await Order.exists({ upiRef: utr, _id: { $ne: order._id } })
+    const usedElsewhere = utr && await Order.exists({ upiRef: utr, _id: { $ne: order._id } })
     if (usedElsewhere) return res.status(400).json({ message: 'This transaction number is already used for another order. Please check the number.' })
 
-    order.upiRef = utr
+    order.upiRef = utr || undefined
     order.paymentStatus = 'submitted'
     order.paymentSubmittedAt = new Date()
     await order.save()

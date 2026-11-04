@@ -77,7 +77,24 @@ describe('Paying for an order', () => {
     expect(r.body.message).toMatch(/already used/)
   })
 
-  test.each(['12345', '1234567890123', 'abcdefghijkl', '', null, { $gt: '' }])('transaction number %p is refused', async (utr) => {
+  test.each([undefined, '', null])('"I have paid" without a transaction number (%p) is accepted for checking', async (utr) => {
+    const o = (await placeOrder({ product: await makeProduct() })).body
+    const r = await sendRef(o, utr)
+    expect(r.status).toBe(200)
+    expect(r.body.paymentStatus).toBe('submitted')
+    const saved = await Order.findById(o._id)
+    expect(saved.paymentStatus).toBe('submitted')
+    expect(saved.upiRef || '').toBe('')
+  })
+
+  test('two orders can both be sent without a number', async () => {
+    const a = (await placeOrder({ product: await makeProduct() })).body
+    const b = (await placeOrder({ product: await makeProduct() })).body
+    expect((await sendRef(a, '')).status).toBe(200)
+    expect((await sendRef(b, '')).status).toBe(200)
+  })
+
+  test.each(['12345', '1234567890123', 'abcdefghijkl', { $gt: '' }])('a wrong transaction number %p is refused', async (utr) => {
     const o = (await placeOrder({ product: await makeProduct() })).body
     expect((await sendRef(o, utr)).status).toBe(400)
     expect((await Order.findById(o._id)).paymentStatus).toBe('pending')
