@@ -1,3 +1,4 @@
+const { cleanLink } = require('../utils/links')
 const Banner = require('../models/Banner')
 const { fileToUrl } = require('../config/cloudinary')
 
@@ -24,7 +25,8 @@ exports.getAll = async (_req, res) => {
 exports.getActive = async (_req, res) => {
   try {
     const banners = await Banner.find({ isActive: true }).sort({ order: 1 }).lean()
-    res.json(banners)
+    // older banners may hold a mistyped link: fix it on the way out (or fall back to all products)
+    res.json(banners.map(b => ({ ...b, link: cleanLink(b.link).link ?? '/collections' })))
   } catch {
     res.status(500).json({ message: 'Server error' })
   }
@@ -42,7 +44,9 @@ exports.create = async (req, res) => {
       return res.status(400).json({ message: 'Video required (upload a video or paste a video URL)' })
 
     const mobileImage = pick(req, 'mobileImage', 'mobileImageUrl') || ''
-    const banner = await Banner.create({ ...strip(req.body), mediaType, image, video, mobileImage })
+    const link = cleanLink(req.body.link)
+    if (link.error) return res.status(400).json({ message: link.error })
+    const banner = await Banner.create({ ...strip(req.body), mediaType, image, video, mobileImage, link: link.link })
     res.status(201).json(banner)
   } catch (err) {
     res.status(400).json({ message: err.message })
@@ -55,6 +59,11 @@ exports.update = async (req, res) => {
     if (!banner) return res.status(404).json({ message: 'Banner not found' })
 
     const updates   = strip(req.body)
+    if (updates.link !== undefined) {
+      const link = cleanLink(updates.link)
+      if (link.error) return res.status(400).json({ message: link.error })
+      updates.link = link.link
+    }
     const mediaType = req.body.mediaType === 'video' ? 'video' : req.body.mediaType === 'image' ? 'image' : banner.mediaType
     delete updates.image
     delete updates.video
