@@ -18,3 +18,9 @@ test('the return window is set in one place and used on the policy and FAQ pages
     expect(fs.readFileSync(path.resolve(__dirname, '..', f), 'utf8')).toMatch(/RETURN_REPORT_WINDOW/)
   }
 })
+
+test('no page claims 18K gold or gold plating (the jewellery is anti-tarnish, not gold)', () => {
+  const all = [...src, path.resolve(__dirname, '../../index.html')]
+  const offenders = all.filter(f => /\b18\s?k\b|gold[- ]plated|real gold|solid gold|pure gold/i.test(fs.readFileSync(f, 'utf8')))
+  expect(offenders.map(f => path.relative(process.cwd(), f))).toEqual([])
+})

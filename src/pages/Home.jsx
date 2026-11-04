@@ -10,7 +10,7 @@ import { getImageUrl } from '../utils/image'
 
 // Static brand promise strip — no DB needed for these
 const PROMISES = [
-  { icon: Shield,    title: 'Fine Craftsmanship', desc: '18K gold-plated, tarnish-free' },
+  { icon: Shield,    title: 'Fine Craftsmanship', desc: 'Anti-tarnish, hypoallergenic' },
   { icon: Truck,     title: 'Free Shipping',       desc: 'On orders above ₹999' },
   { icon: RefreshCw, title: 'Damage Protection',   desc: 'Replaced or refunded if it arrives damaged' },
   { icon: Smartphone, title: 'Easy UPI Payment',   desc: 'GPay, PhonePe, Paytm & more' },
