@@ -12,6 +12,7 @@ const bannerFiles = mediaUpload([
 router.get('/', ctrl.getAll)
 router.get('/active', ctrl.getActive)
 router.post('/', protect, adminOnly, bannerFiles, ctrl.create)
+router.put('/reorder', protect, adminOnly, ctrl.reorder)   // before '/:id'
 router.put('/:id', protect, adminOnly, bannerFiles, ctrl.update)
 router.delete('/:id', protect, adminOnly, ctrl.remove)
 router.patch('/:id/toggle', protect, adminOnly, ctrl.toggle)

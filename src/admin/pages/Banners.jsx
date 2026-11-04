@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Plus, Trash2, Eye, EyeOff, X, Upload, Edit2, Link as LinkIcon, Image as ImageIcon, Film } from 'lucide-react'
+import { Plus, Trash2, Eye, EyeOff, X, Upload, Edit2, Link as LinkIcon, Image as ImageIcon, Film, ArrowUp, ArrowDown, Type, Frame } from 'lucide-react'
 import AdminLayout from '../components/AdminLayout'
 import { api } from '../api'
 import { getImageUrl, getVideoUrl, getVideoPoster } from '../../utils/image'
@@ -8,8 +8,8 @@ import { getImageUrl, getVideoUrl, getVideoPoster } from '../../utils/image'
 function BannerModal({ banner, onClose, onSave }) {
   const [form, setForm] = useState(
     banner
-      ? { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: 0, mediaType: 'image', focus: 'center', ...banner }
-      : { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: 0, mediaType: 'image', focus: 'center' }
+      ? { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: 0, mediaType: 'image', focus: 'center', style: 'text', ...banner }
+      : { title: '', subtitle: '', badge: '', cta: 'Shop Now', align: 'left', link: '/collections', order: '', mediaType: 'image', focus: 'center', style: 'text' }
   )
   const [file, setFile]       = useState(null)
   const [preview, setPreview] = useState(banner?.image ? getImageUrl(banner.image) : '')
@@ -133,6 +133,27 @@ function BannerModal({ banner, onClose, onSave }) {
               ))}
             </div>
           </div>
+
+          {/* Banner style — photo slides only */}
+          {!isVideo && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Banner style</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[['text', 'Text on photo', Type, 'The site writes your title & button'], ['poster', 'Poster', Frame, 'Text is already in your image']].map(([value, label, Icon, hint]) => (
+                  <button key={value} type="button" onClick={() => set('style', value)} aria-pressed={form.style === value}
+                    className={`flex flex-col items-center gap-0.5 py-2.5 px-2 rounded-lg border text-sm font-medium transition-colors ${
+                      form.style === value ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}>
+                    <span className="flex items-center gap-2"><Icon size={15} /> {label}</span>
+                    <span className="text-[11px] font-normal text-gray-500">{hint}</span>
+                  </button>
+                ))}
+              </div>
+              {form.style === 'poster' && (
+                <p className="text-xs text-gray-500 mt-2">The whole poster is shown (never cropped) and opens the Button Link when tapped. Best sizes: laptop 1920 × 840, phone 1080 × 1640. The Title below is only used as the poster's name.</p>
+              )}
+            </div>
+          )}
 
           {/* Video input — only for video slides */}
           {isVideo && (
@@ -350,16 +371,6 @@ function BannerModal({ banner, onClose, onSave }) {
               </select>
             </div>
 
-            {/* Display order */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
-              <input
-                type="number"
-                value={form.order}
-                onChange={e => set('order', e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
-            </div>
           </div>
 
           {/* Link */}
@@ -423,6 +434,14 @@ export default function Banners() {
     load()
   }
 
+  // Move a banner up or down: the website shows them in this order (1, 2, 3 …)
+  const move = async (index, dir) => {
+    const j = index + dir
+    if (j < 0 || j >= banners.length) return
+    const ids = banners.map(b => b._id); [ids[index], ids[j]] = [ids[j], ids[index]]
+    setBanners(await api.reorderBanners(ids))
+  }
+
   const handleSave = async fd => {
     if (modal?._id) await api.updateBanner(modal._id, fd)
     else            await api.createBanner(fd)
@@ -436,7 +455,7 @@ export default function Banners() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Banners</h1>
-            <p className="text-sm text-gray-500">Manage homepage hero banners</p>
+            <p className="text-sm text-gray-500">Home page banners. They show in this order: use ↑ ↓ to choose 1st, 2nd, 3rd.</p>
           </div>
           <button
             onClick={() => setModal({})}
@@ -468,13 +487,22 @@ export default function Banners() {
           </div>
         ) : (
           <div className="grid gap-4">
-            {banners.map(banner => (
+            {banners.map((banner, index) => (
               <div
                 key={banner._id}
                 className={`bg-white rounded-xl border overflow-hidden flex flex-col sm:flex-row ${
                   banner.isActive ? 'border-gray-100' : 'border-gray-100 opacity-60'
                 }`}
               >
+                {/* Position */}
+                <div className="flex sm:flex-col items-center justify-center gap-1 px-3 py-2 sm:py-0 bg-gray-50 border-b sm:border-b-0 sm:border-r border-gray-100">
+                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${banner.title} up`}
+                    className="p-1.5 rounded-md hover:bg-white disabled:opacity-30"><ArrowUp size={15} /></button>
+                  <span className="text-lg font-bold text-gray-700 w-7 text-center" aria-label={`Position ${index + 1}`}>{index + 1}</span>
+                  <button type="button" onClick={() => move(index, 1)} disabled={index === banners.length - 1} aria-label={`Move ${banner.title} down`}
+                    className="p-1.5 rounded-md hover:bg-white disabled:opacity-30"><ArrowDown size={15} /></button>
+                </div>
+
                 {/* Thumbnail */}
                 <div className="sm:w-48 h-32 sm:h-auto shrink-0 bg-gray-100 relative">
                   {banner.mediaType === 'video' && (
@@ -518,7 +546,7 @@ export default function Banners() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 mt-2">
-                      Button: "{banner.cta || 'Shop Now'}" · Align: {banner.align || 'left'} · Link: {banner.link} · Order: {banner.order}{banner.mobileImage ? ' · Has phone photo' : ''}
+                      {banner.style === 'poster' ? 'Poster' : 'Text on photo'} · Button: "{banner.cta || 'Shop Now'}" · Link: {banner.link}{banner.mobileImage ? ' · Has phone photo' : ' · No phone photo'}
                     </p>
                   </div>
 

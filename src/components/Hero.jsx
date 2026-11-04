@@ -15,15 +15,18 @@ const FOCUS = { left: 'left center', right: 'right center', top: 'center top', b
 const focusOf = s => FOCUS[s.focus] || FOCUS.center
 
 // The slide photo: a separate tall photo on phones when the admin added one
+// Posters (text already in the picture) are shown whole: never cropped
+const isPoster = s => s?.style === 'poster'
+
 function SlideImage({ s, eager }) {
   return (
-    <picture>
+    <picture className={isPoster(s) ? 'block w-full h-full bg-black' : undefined}>
       {s.mobileImage && <source media="(max-width: 767px)" srcSet={getImageUrl(s.mobileImage, 900)} />}
       <img
         src={getImageUrl(s.image, 1920)}
         alt={s.title}
-        className="w-full h-full object-cover"
-        style={{ objectPosition: focusOf(s) }}
+        className={`w-full h-full ${isPoster(s) ? 'object-contain' : 'object-cover'}`}
+        style={{ objectPosition: isPoster(s) ? 'center center' : focusOf(s) }}
         loading={eager ? 'eager' : 'lazy'}
         fetchpriority={eager ? 'high' : 'low'}
         decoding="async"
@@ -133,12 +136,19 @@ export default function Hero() {
           ) : (
             <SlideImage s={s} eager={i === 0} />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/10 md:bg-gradient-to-r md:from-black/60 md:via-black/30 md:to-black/20" />
+          {!isPoster(s) && <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/10 md:bg-gradient-to-r md:from-black/60 md:via-black/30 md:to-black/20" />}
         </div>
       ))}
 
+      {/* Poster: the whole picture is the link, with one small button */}
+      {isPoster(slide) && (
+        <Link to={slide.link || '/collections'} aria-label={slide.title} className="absolute inset-0 z-10 flex items-end justify-center pb-10 md:pb-12">
+          <span className="btn-gold inline-block px-6 sm:px-8 shadow-lg">{slide.cta || 'Shop Now'}</span>
+        </Link>
+      )}
+
       {/* Content */}
-      <div className={`relative z-10 h-full flex flex-col justify-end pb-16 md:pb-24 px-6 sm:px-10 md:px-24 ${alignClass}`}>
+      {!isPoster(slide) && <div className={`relative z-10 h-full flex flex-col justify-end pb-16 md:pb-24 px-6 sm:px-10 md:px-24 ${alignClass}`}>
         {slide.badge && (
           <span className="text-gold-400 tracking-[0.3em] text-[10px] uppercase mb-3 md:mb-5 font-medium">
             {slide.badge}
@@ -163,7 +173,7 @@ export default function Hero() {
             View All
           </Link>
         </div>
-      </div>
+      </div>}
 
       {/* Arrows — only shown with multiple banners */}
       {banners.length > 1 && (

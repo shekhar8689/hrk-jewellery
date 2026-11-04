@@ -70,6 +70,7 @@ export const api = {
   updateBanner: (id, form) => req('PUT', `/banners/${id}`, form, true),
   deleteBanner: (id) => req('DELETE', `/banners/${id}`),
   toggleBanner: (id) => req('PATCH', `/banners/${id}/toggle`),
+  reorderBanners: (ids) => req('PUT', '/banners/reorder', { ids }),
 
   // Offer banner (home page promotion + top bar code)
   getOffer: () => req('GET', '/offer/admin'),
