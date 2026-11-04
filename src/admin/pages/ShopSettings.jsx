@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, CheckCircle, MessageCircle, Phone, Mail } from 'lucide-react'
 import AdminLayout from '../components/AdminLayout'
+import OrderAlerts from './OrderAlerts'
 import { api } from '../api'
 import { whatsappLink, telLink } from '../../config/shop'
 
@@ -113,6 +114,7 @@ export default function ShopSettings() {
             </button>
           </form>
         )}
+        <OrderAlerts />
       </div>
     </AdminLayout>
   )

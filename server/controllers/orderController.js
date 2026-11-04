@@ -1,3 +1,4 @@
+const { notifyNewOrder, notifyPaymentSubmitted } = require('../utils/orderAlerts')
 const Order = require('../models/Order')
 const Product = require('../models/Product')
 const Coupon = require('../models/Coupon')
@@ -322,6 +323,7 @@ exports.create = async (req, res) => {
     const [order] = await Order.create([orderData], { session })
     await session.commitTransaction()
     res.status(201).json(order)
+    notifyNewOrder(order.toObject ? order.toObject() : order)   // email the owner (after answering)
   } catch (err) {
     if (session.inTransaction()) await session.abortTransaction().catch(() => {})
     // Two orders touching the same product at the same moment: MongoDB asks us
@@ -495,6 +497,7 @@ exports.submitUpiRef = async (req, res) => {
     order.paymentSubmittedAt = new Date()
     await order.save()
     res.json(await customerView(order.toObject()))
+    notifyPaymentSubmitted(order.toObject())               // "payment to check" email to the owner
   } catch {
     res.status(500).json({ message: 'Server error' })
   }

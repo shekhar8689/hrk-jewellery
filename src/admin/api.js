@@ -50,6 +50,9 @@ export const api = {
   getShop: () => req('GET', '/shop'),
   updateShop: (data) => req('PUT', '/shop', data),
   testEmail: () => req('POST', '/shop/test-email', {}),
+  getAlerts: () => req('GET', '/shop/alerts'),
+  updateAlerts: (data) => req('PUT', '/shop/alerts', data),
+  testAlert: () => req('POST', '/shop/alerts/test', {}),
 
   // UPI payment settings
   getPaymentSettings: () => req('GET', '/payment/admin'),

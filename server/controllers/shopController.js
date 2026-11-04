@@ -89,3 +89,27 @@ exports.testEmail = async (req, res) => {
   })
   res.json(r.sent ? { sent: true, to } : { sent: false, to, problem: r.problem })
 }
+
+// ── Order alerts (admin only; the address is never public) ───────────────────
+exports.getAlerts = async (_req, res) => {
+  const s = await ShopSettings.findOne({ key: 'main' }).select('alertEmail').lean()
+  res.json({ alertEmail: (s && s.alertEmail) || '' })
+}
+
+exports.updateAlerts = async (req, res) => {
+  const v = String(req.body?.alertEmail ?? '').trim().toLowerCase()
+  if (v && (!EMAIL_RE.test(v) || v.length > 120)) return res.status(400).json({ message: 'Enter a valid email address, or leave it empty to turn alerts off' })
+  const doc = (await ShopSettings.findOne({ key: 'main' })) || new ShopSettings({ key: 'main' })
+  doc.alertEmail = v
+  await doc.save()
+  res.json({ alertEmail: v })
+}
+
+exports.testAlert = async (_req, res) => {
+  const { sendEmail } = require('../utils/email')
+  const { alertTo } = require('../utils/orderAlerts')
+  const to = await alertTo()
+  if (!to) return res.status(400).json({ message: 'Add the email for order alerts first, then save' })
+  const r = await sendEmail({ to, subject: 'HRK Jewellery order alerts test', text: 'Order alerts work. You will get an email for each new order and each payment to check.', html: '<p>Order alerts work. You will get an email for each <b>new order</b> and each <b>payment to check</b>.</p>' })
+  res.json(r.sent ? { sent: true, to } : { sent: false, to, problem: r.problem })
+}
